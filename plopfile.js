@@ -15,7 +15,7 @@ export default function (plop) {
                 type: 'input',
                 name: 'projectName',
                 message: 'What is your project name?',
-                default: 'my-vibe-app',
+                default: 'my-vibe-now',
                 validate: (input) => {
                     const validName = /^[a-z0-9-_.]+$/.test(input);
                     if (!validName) {

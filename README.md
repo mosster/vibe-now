@@ -1,84 +1,93 @@
-# Vibe CLI 🚀
+# Vibe Now 🌌
 
-A premium, interactive CLI wizard for scaffolding modern Next.js applications with a perfectly curated stack. Stop running manual `npm install` commands and start vibing.
+A premium, interactive CLI wizard for scaffolding modern Next.js applications with a perfectly curated stack. Stop running manual `npm install` commands and start building within seconds.
 
 ## ✨ Features
 
 - **Interactive Wizard**: A beautiful CLI experience powered by Plop.js and Inquirer.
-- **Smart Scaffolding**: Automatically runs `create-next-app` under the hood.
-- **Curated Stack**:
-  - **Framework**: Next.js (App Router, TypeScript, Tailwind CSS)
-  - **State Management**: Zustand
-  - **Data Fetching**: TanStack React Query
-  - **Validation**: Zod
-  - **UI/Components**: shadcn/ui (with auto-initialization and component pre-loading)
-  - **Backend/ORM**: Supabase (JS Client) & Drizzle ORM (with Postgres support)
-  - **Authentication**: Better Auth
-- **Scalable Architecture**: Easy-to-extend configuration for adding your own favorite libraries.
-- **DRY & Batch Focused**: Installs all selected dependencies in a single pass to save time.
+- **World-Class Feedback**: Engaged progress tracking with **Ora** spinners for a premium feel.
+- **Smart Scaffolding**: Automatically orchestrates `create-next-app` and library-specific initializations (like `shadcn init` and `biome init`).
+- **Dynamic Documentation**: Automatically generates a project-specific `README.md` and a comprehensive `AGENTS.md` to guide AI assistants (Cursor, Claude) on your stack and standards.
+- **Safety First**: Project name validation and directory check to prevent accidental overwrites.
+
+## 🛠️ The Curated Stack
+
+### Base
+- **Framework**: Next.js (App Router, TypeScript, Tailwind CSS v4)
+
+### Optional Libraries
+- **State**: Zustand
+- **Validation**: Zod
+- **Data Fetching**: TanStack React Query
+- **UI & Components**: shadcn/ui (Initializes & adds all components automatically)
+- **Database & ORM**: Supabase JS client, Drizzle ORM (Postgres + Drizzle Kit)
+- **Authentication**: Better Auth
+- **Email**: Resend
+- **Payments**: Mutually exclusive selection between **Stripe** and **Polar.sh**
+- **AI SDK**: Vercel AI SDK & OpenRouter Provider support
+- **Linting & Formatting**: Choose between **ESLint + Prettier** or **Biome** (High speed)
+- **UI Helpers**: nuqs, React Hook Form, Day.js, Lodash
 
 ---
 
 ## 🚀 Quick Start
 
-You don't even need to install it to try it out:
+Launch the wizard without installation:
 
 ```bash
-npx vibe-init
+npx vibe-now
 ```
 
 ---
 
 ## 🛠️ Local Development
 
-If you want to clone this repo and customize it for your own workflow:
+Clone the repo to customize the logic or add your own favorite packages.
 
 ### 1. Installation
 ```bash
-git clone https://github.com/your-username/vibe-cli.git
-cd vibe-cli
+git clone https://github.com/mosster/vibe-now.git
+cd vibe-now
 npm install
 ```
 
-### 2. Linking for Global Use
-To use the `vibe-init` command globally on your machine while developing:
+### 2. Linking for Development
+To use the `vibe-now` command globally on your machine while developing:
 ```bash
 npm link
 ```
-
-Now you can run `vibe-init` from any directory!
+Now you can run `vibe-now` from any directory!
 
 ### 3. Adding New Packages
-The CLI is built with a "Configuration-First" approach. To add a new library to the wizard:
+The CLI uses a group-based configuration for easy maintenance. To add a new library:
 1. Open `lib/packages.js`.
-2. Add a new object to the `PACKAGE_CONFIG` array:
-   ```javascript
-   {
-     id: 'lucide',
-     name: 'Lucide React Icons',
-     install: ['lucide-react'],
-     default: true
-   }
-   ```
-The wizard will automatically handle the prompts and installation logic.
+2. Find the relevant `PACKAGE_GROUPS` entry or add a new one.
+
+```javascript
+{
+  category: 'My New Category',
+  items: [
+    {
+      id: 'myPackage',
+      name: 'Cool Library',
+      install: ['cool-lib-package'],
+      default: false
+    }
+  ]
+}
+```
 
 ---
 
-## 📦 Publishing to NPM
+## 📦 Publishing
 
-### 1. Prepare for Release
-Ensure your `package.json` has a unique name and the correct version.
-```bash
-npm version patch
-```
+When you're ready to release a new version:
 
-### 2. Login & Publish
-```bash
-npm login
-npm publish --access public
-```
+1. Update version: `npm version patch` (or minor/major)
+2. Login: `npm login`
+3. Publish: `npm publish --access public`
 
 ---
 
 ## 📜 License
-MIT © [Your Name/Organization]
+MIT © [Ed Moss](https://github.com/mosster)
