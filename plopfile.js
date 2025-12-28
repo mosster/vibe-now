@@ -173,6 +173,21 @@ export default function (plop) {
                         console.error(error);
                     }
 
+                    // 4. Calculate project weight (node_modules size)
+                    const statsSpinner = ora({
+                        text: 'Calculating project weight...',
+                        color: 'green',
+                    }).start();
+
+                    try {
+                        const { stdout } = await execa('du', ['-sh', 'node_modules'], { cwd: projectPath });
+                        const size = stdout.split('\t')[0];
+                        statsSpinner.succeed(`Project weight: ${size} (node_modules)`);
+                    } catch (error) {
+                        statsSpinner.stop();
+                        // Fail silently if du is not available
+                    }
+
                     return 'All selected packages installed and initialized';
                 },
             });
