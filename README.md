@@ -2,12 +2,15 @@
 
 A premium, interactive CLI wizard for scaffolding modern Next.js applications with a perfectly curated stack. Stop running manual `npm install` commands and start building within seconds.
 
+<img width="3680" height="4144" alt="Terminal" src="https://github.com/user-attachments/assets/4a6e97c4-778b-432f-8fe0-46f1193aa543" />
+
 ## ✨ Features
 
 - **Interactive Wizard**: A beautiful CLI experience powered by Plop.js and Inquirer.
 - **World-Class Feedback**: Engaged progress tracking with **Ora** spinners for a premium feel.
 - **Smart Scaffolding**: Automatically orchestrates `create-next-app` and library-specific initializations (like `shadcn init` and `biome init`).
 - **Dynamic Documentation**: Automatically generates a project-specific `README.md` and a comprehensive `AGENTS.md` to guide AI assistants (Cursor, Claude) on your stack and standards.
+- **Template System**: Powered by Handlebars templates in the `templates/` directory for highly customized project initialization.
 - **Safety First**: Project name validation and directory check to prevent accidental overwrites.
 
 ## 🛠️ The Curated Stack
@@ -75,6 +78,19 @@ The CLI uses a group-based configuration for easy maintenance. To add a new libr
     }
   ]
 }
+```
+
+### 4. Adding New Templates
+The wizard currently generates `README.md` and `AGENTS.md` automatically. To add a new template:
+1. Create a Handlebars file in the `templates/` directory (e.g., `templates/CONFIG.md.hbs`).
+2. Open `plopfile.js`.
+3. Locate the `// 3. Generate README and AGENTS files` section.
+4. Add your new template read and write logic:
+
+```javascript
+const myTmpl = fs.readFileSync(path.join(__dirname, 'templates/CONFIG.md.hbs'), 'utf8');
+const renderedMy = plop.renderString(myTmpl, templateData);
+fs.writeFileSync(path.join(projectPath, 'CONFIG.md'), renderedMy);
 ```
 
 ---

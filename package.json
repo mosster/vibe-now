@@ -9,6 +9,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mosster/vibe-now.git"
+  },
   "keywords": [],
   "author": "Ed Moss <ed@mossified.com>",
   "license": "ISC",
