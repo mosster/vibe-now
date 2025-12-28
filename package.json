@@ -1,22 +1,24 @@
 {
-  "name": "vibe-cli",
+  "name": "vibe-now",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
   "bin": {
-    "vibe-init": "./index.js"
+    "vibe-now": "./index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ed Moss <ed@mossified.com>",
   "license": "ISC",
-  "description": "",
+  "description": "Quickly scaffold a Next.js app with a curated stack",
   "dependencies": {
     "execa": "^8.0.1",
+    "fs-extra": "^11.3.3",
     "inquirer": "^9.2.16",
     "minimist": "^1.2.8",
+    "ora": "^9.0.0",
     "plop": "^4.0.4"
   }
 }

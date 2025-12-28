@@ -1,6 +1,11 @@
 import { execa } from 'execa';
 import path from 'node:path';
-import { PACKAGE_CONFIG } from './lib/packages.js';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import ora from 'ora';
+import { PACKAGE_GROUPS, ALL_ITEMS } from './lib/packages.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default function (plop) {
     plop.setGenerator('next-app', {
@@ -11,13 +16,34 @@ export default function (plop) {
                 name: 'projectName',
                 message: 'What is your project name?',
                 default: 'my-vibe-app',
+                validate: (input) => {
+                    const validName = /^[a-z0-9-_.]+$/.test(input);
+                    if (!validName) {
+                        return 'Project name must be url-safe (a-z, 0-9, -, _, .)';
+                    }
+                    if (input === '.' && fs.readdirSync(process.cwd()).length > 0) {
+                        return 'Current directory is not empty. Please provide a different project name.';
+                    }
+                    return true;
+                }
             },
-            ...PACKAGE_CONFIG.map((pkg) => ({
-                type: 'confirm',
-                name: pkg.id,
-                message: `Include ${pkg.name}?`,
-                default: pkg.default,
-            })),
+            ...PACKAGE_GROUPS.flatMap((group) => {
+                if (group.type === 'list') {
+                    return [{
+                        type: 'list',
+                        name: group.id,
+                        message: `${group.category}:`,
+                        choices: group.choices,
+                        default: group.default,
+                    }];
+                }
+                return group.items.map(item => ({
+                    type: 'confirm',
+                    name: item.id,
+                    message: `${group.category}: Include ${item.name}?`,
+                    default: item.default,
+                }));
+            }),
         ],
         actions: (data) => {
             const actions = [];
@@ -27,19 +53,29 @@ export default function (plop) {
             actions.push({
                 type: 'customSync',
                 async action(answers) {
-                    console.log(`\n🚀 Creating base Next.js app in ${answers.projectName}...`);
-                    await execa('npx', [
-                        'create-next-app@latest',
-                        answers.projectName,
-                        '--ts',
-                        '--tailwind',
-                        '--app',
-                        '--eslint',
-                        '--import-alias',
-                        '@/*',
-                        '--yes',
-                    ], { stdio: 'inherit' });
-                    return 'Base Next.js app created';
+                    const spinner = ora({
+                        text: `Creating base Next.js app in ${answers.projectName}...`,
+                        color: 'cyan',
+                    }).start();
+
+                    try {
+                        await execa('npx', [
+                            'create-next-app@latest',
+                            answers.projectName,
+                            '--ts',
+                            '--tailwind',
+                            '--app',
+                            '--eslint',
+                            '--import-alias',
+                            '@/*',
+                            '--yes',
+                        ]);
+                        spinner.succeed('Base Next.js app created!');
+                        return 'Base Next.js app created';
+                    } catch (error) {
+                        spinner.fail('Failed to create Next.js app');
+                        throw error;
+                    }
                 },
             });
 
@@ -47,60 +83,107 @@ export default function (plop) {
             actions.push({
                 type: 'customSync',
                 async action(answers) {
-                    const selectedPackages = PACKAGE_CONFIG.filter(pkg => answers[pkg.id]);
+                    // Collect standard selections
+                    const selectedPackages = ALL_ITEMS.filter(item => answers[item.id]);
+
+                    // Collect list-based selections (e.g. Payments)
+                    PACKAGE_GROUPS.filter(g => g.type === 'list').forEach(group => {
+                        const choice = answers[group.id];
+                        if (choice && choice !== 'none' && group.providerConfig[choice]) {
+                            selectedPackages.push({
+                                ...group.providerConfig[choice],
+                                id: `${group.id}_${choice}` // unique internal id
+                            });
+                        }
+                    });
 
                     if (selectedPackages.length === 0) return 'No additional packages selected';
 
-                    console.log('\n📦 Installing selected packages...');
+                    const pkgNames = selectedPackages.map(p => p.name).join(', ');
+                    const installSpinner = ora({
+                        text: `Installing: ${pkgNames}...`,
+                        color: 'magenta',
+                    }).start();
 
                     const installCmds = selectedPackages.flatMap(pkg => pkg.install || []);
                     const devInstallCmds = selectedPackages.flatMap(pkg => pkg.devInstall || []);
 
-                    // Run standard installs
-                    if (installCmds.length > 0) {
-                        console.log(`\n📦 Installing: ${selectedPackages.filter(p => p.install?.length).map(p => p.name).join(', ')}...`);
-                        await execa('npm', ['install', ...installCmds], {
-                            cwd: projectPath,
-                            stdio: 'inherit'
-                        });
-                    }
+                    try {
+                        // Standard Installs
+                        if (installCmds.length > 0) {
+                            await execa('npm', ['install', ...installCmds], { cwd: projectPath });
+                        }
 
-                    // Run dev installs
-                    if (devInstallCmds.length > 0) {
-                        console.log(`\n🛠️  Installing devDependencies: ${selectedPackages.filter(p => p.devInstall?.length).map(p => p.name).join(', ')}...`);
-                        await execa('npm', ['install', '-D', ...devInstallCmds], {
-                            cwd: projectPath,
-                            stdio: 'inherit'
-                        });
+                        // Dev Installs
+                        if (devInstallCmds.length > 0) {
+                            installSpinner.text = 'Installing devDependencies...';
+                            await execa('npm', ['install', '-D', ...devInstallCmds], { cwd: projectPath });
+                        }
+                        installSpinner.succeed('Packages installed successfully!');
+                    } catch (error) {
+                        installSpinner.fail('Package installation failed');
+                        throw error;
                     }
 
                     // Run initialization commands (like shadcn init)
                     for (const pkg of selectedPackages) {
                         if (pkg.commands && pkg.commands.length > 0) {
-                            console.log(`\n⚙️  Running initialization for ${pkg.name}...`);
-                            for (const cmd of pkg.commands) {
-                                const [command, ...args] = cmd.split(' ');
-                                await execa(command, args, {
-                                    cwd: projectPath,
-                                    stdio: 'inherit'
-                                });
+                            console.log(`\n✨ Finalizing ${pkg.name}...`);
+
+                            try {
+                                for (const cmd of pkg.commands) {
+                                    const [command, ...args] = cmd;
+                                    // Use 'inherit' so user can see/interact with shadow-style commands
+                                    await execa(command, args, {
+                                        cwd: projectPath,
+                                        stdio: 'inherit'
+                                    });
+                                }
+                            } catch (error) {
+                                console.error(`❌ Failed to initialize ${pkg.name}`);
+                                throw error;
                             }
                         }
+                    }
+
+                    // 3. Generate README and AGENTS files
+                    const docSpinner = ora({
+                        text: 'Generating custom documentation and agent rules...',
+                        color: 'blue',
+                    }).start();
+
+                    try {
+                        const templateData = {
+                            projectName: answers.projectName === '.' ? path.basename(projectPath) : answers.projectName,
+                            selectedPackages
+                        };
+
+                        const readmeTmpl = fs.readFileSync(path.join(__dirname, 'templates/README.md.hbs'), 'utf8');
+                        const agentsTmpl = fs.readFileSync(path.join(__dirname, 'templates/AGENTS.md.hbs'), 'utf8');
+
+                        const renderedReadme = plop.renderString(readmeTmpl, templateData);
+                        const renderedAgents = plop.renderString(agentsTmpl, templateData);
+
+                        fs.writeFileSync(path.join(projectPath, 'README.md'), renderedReadme);
+                        fs.writeFileSync(path.join(projectPath, 'AGENTS.md'), renderedAgents);
+
+                        docSpinner.succeed('Documentation and AGENTS.md generated!');
+                    } catch (error) {
+                        docSpinner.fail('Failed to generate documentation files');
+                        console.error(error);
                     }
 
                     return 'All selected packages installed and initialized';
                 },
             });
 
-            actions.push('\n🎉 Setup complete! Next steps:');
-            actions.push(`   cd ${data.projectName}`);
-            actions.push('   npm run dev\n');
+            actions.push('\n🌌 Vibe Check: COMPLETE. Your stack is ready.');
+            actions.push(`🚀 Next steps:\n   cd ${data.projectName}\n   npm run dev\n`);
 
             return actions;
         },
     });
 
-    // Custom action type that waits for the promise
     plop.setActionType('customSync', async (answers, config) => {
         return await config.action(answers);
     });

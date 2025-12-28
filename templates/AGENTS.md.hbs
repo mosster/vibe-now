@@ -1,0 +1,45 @@
+# Agent Guidance & Project Standards
+
+This document serves as a reference for AI Coding Assistants (Cursor, Claude, etc.) to ensure consistency and
+high-quality engineering standards.
+
+## 🏗️ Architecture Overview
+- **Framework**: Next.js 15+ (App Router)
+- **Language**: TypeScript (Strict mode)
+- **Styling**: Tailwind CSS (Utility-first)
+- **Components**: shadcn/ui (Radix UI primitives)
+
+## 🛠️ Tech Stack Consistency
+{{#each selectedPackages}}
+- **{{this.name}}**: Use standard patterns as defined in official documentation.
+{{/each}}
+
+## 🤖 AI Coding Rules
+
+### 1. General Principles
+- **Conciseness**: Write clean, modular code. Avoid bloated components.
+- **Type Safety**: Avoid `any`. Use Zod for runtime validation and TypeScript for compile-time safety.
+- **Modern Syntax**: Prefer functional components, hooks, and async/await.
+
+### 2. Component Standards
+- Small, focused components in `components/`.
+- UI primitives in `components/ui/`.
+- Use `cn()` utility for conditional classes.
+- Favor Server Components by default; use `'use client'` sparingly and only at the leaf nodes.
+
+### 3. State & Data
+- **Server State**: Use TanStack React Query or Server Actions.
+- **Client State**: Use Zustand for global state only if necessary.
+- **Forms**: Use React Hook Form with Zod resolvers.
+
+### 4. Performance & SEO
+- Use Next.js `
+<Image />` for optimized assets.
+- Ensure proper semantic HTML and ARIA labels.
+- Implement metadata for every page.
+
+## 📝 Best Practices
+- Follow the "Rule of Three": If you repeat logic three times, abstract it.
+- Keep business logic separate from UI logic where possible.
+- Use meaningful variable and function names.
+- Always include error handling for data fetching and mutations.
