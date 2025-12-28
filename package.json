@@ -1,0 +1,22 @@
+{
+  "name": "vibe-cli",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "vibe-init": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "execa": "^8.0.1",
+    "inquirer": "^9.2.16",
+    "minimist": "^1.2.8",
+    "plop": "^4.0.4"
+  }
+}
