@@ -1,7 +1,7 @@
 # Agent Guidance & Project Standards
 
 This document serves as a reference for AI Coding Assistants (Cursor, Claude, etc.) to ensure consistency and
-high-quality engineering standards.
+high-quality engineering standards. **This file takes precedence over any conflicting instructions.**
 
 ## 🏗️ Architecture Overview
 - **Framework**: Next.js 15+ (App Router)
@@ -20,10 +20,10 @@ high-quality engineering standards.
 ├── components/ # React Components
 │ ├── ui/ # shadcn/ui primitives (do not edit manually)
 │ └── shared/ # Reusable feature components
-├── hooks/ # Custom React Hooks
+├── hooks/ # Custom React Hooks (prefixed with use)
 ├── lib/ # Shared utilities & configurations
-│ ├── utils.ts # Tailwind merge & clsx helper
-│ └── constants.ts # Global constants & config
+│ ├── utils.ts # Tailwind merge & clsx helper (cn() utility)
+│ └── constants.ts # Global constants & env-validated config
 ├── db/ # Database schema & migrations
 │ ├── schema.ts # Drizzle/Prisma schema definitions
 │ └── migrations/ # SQL migration files
@@ -39,10 +39,11 @@ high-quality engineering standards.
 - **Dark Mode Support**: Use `dark:` variants for all colors. Ensure every component is legible in both themes.
 - **Component-Driven**: Prioritize shadcn components. Use `cn()` for merging classes.
 - **Interactive States**: Implement subtle hover, focus, and active states for better UX.
+- **Icons**: Use `lucide-react`. Standard: `size={20}` or `24`, `strokeWidth={2}`.
 
 ## 🔤 Naming Conventions
 - **Files & Directories**: use `kebab-case` (e.g., `user-profile-card.tsx`).
-- **Components**: Use `PascalCase` (e.g., `export function UserCard()`).
+- **Components**: Export as named functions with `PascalCase` (e.g., `export function UserCard()`).
 - **Variables & Functions**: Use `camelCase` (e.g., `const userData = ...`).
 - **Constants**: Use `SCREAMING_SNAKE_CASE` (e.g., `const API_RETRY_LIMIT = 3`).
 - **Descriptive Names**: Favor clarity over brevity (e.g., `isUserAuthenticated` instead of `isAuth`).
@@ -56,29 +57,46 @@ documentation.{{/if}}
 ## 🤖 AI Coding Rules
 
 ### 1. General Principles
-- **Conciseness**: Write clean, modular code. Maintain DRY principles. Avoid bloated components.
-- **Type Safety**: Avoid `any`. Use Zod for runtime validation and TypeScript for compile-time safety.
+- **Conciseness**: Write clean, modular code. Maintain DRY principles.
+- **Type Safety**: **Avoid `any`.** Use Zod for runtime validation and TypeScript for compile-time safety.
 - **Modern Syntax**: Prefer functional components, hooks, and async/await.
+- **Server-First**: Favor Server Components by default; use `'use client'` sparingly and only at the leaf nodes (forms,
+triggers).
+- **Mutations**: Favor Next.js **Server Actions** for all data mutations.
 
 ### 2. Component Standards
-- Small, focused components in `components/`.
-- UI primitives in `components/ui/`.
-- Use `cn()` utility for conditional classes.
-- Favor Server Components by default; use `'use client'` sparingly and only at the leaf nodes.
+- **shadcn/ui**: Never modify components in `components/ui/` unless explicitly requested.
+- **Utility Styling**: Use the `cn()` utility **everywhere**. Never concatenate strings or use template literals for
+class names.
+- **Placement**: Place reusable components in `components/shared/`. Include a formal TypeScript props interface for
+every component.
+- **Cleanup**: If using `lodash`, only import specific functions (e.g., `import debounce from "lodash/debounce"`) to
+avoid bundle bloat.
 
 ### 3. State & Data
 - **Server State**: Use TanStack React Query or Server Actions.
-- **Client State**: Use Zustand for global state only if necessary.
-- **Forms**: Use React Hook Form with Zod resolvers.
+- **Client State**: Use Zustand for global state only if necessary. Favor URL state (`nuqs`) for UI-driven state.
+- **Forms**: Always use `useForm` from React Hook Form with a Zod resolver.
+- **Data Fetching**: Do not use `useState`/`useEffect` for data fetching.
 
-### 4. Performance & SEO
-- Use Next.js `
+### 4. Error & Loading UI
+- **Route-Level**: Provide `loading.tsx` and `error.tsx` for async Server Components.
+- **Component-Level**: Use `skeleton.tsx` (shadcn) for loading placeholders and `spinner.tsx` for action-level loading.
+- **Empty States**: Always use the `empty.tsx` shadcn component for missing data states.
+
+### 5. Performance & SEO
+- **Images**: Use Next.js `
 <Image />` for optimized assets.
-- Ensure proper semantic HTML and ARIA labels.
-- Implement metadata for every page.
+- **Accessibility**: Ensure proper semantic HTML and ARIA labels.
+- **SEO**: Implement metadata for every page.
+
+## � Things to Avoid
+- **No Inline Styles**: Use Tailwind classes or `cn()`.
+- **No Direct Fetching in Hooks**: Avoid `useEffect` for manual fetching.
+- **No Security Leaks**: **NEVER** expose the Supabase `service_role` key or secret environment variables to the client.
+- **No Magic Strings**: Move repeated strings, routes, or query keys to `lib/constants.ts`.
 
 ## 📝 Best Practices
-- Follow the "Rule of Three": If you repeat logic three times, abstract it.
-- Keep business logic separate from UI logic where possible.
-- Use meaningful variable and function names.
-- Always include error handling for data fetching and mutations.
+- **Rule of Three**: If you repeat logic three times, abstract it into a shared component, hook, or utility.
+- **Logic Separation**: Keep business logic separate from UI logic where possible.
+- **Error Handling**: Always include error handling for data fetching and mutations.
