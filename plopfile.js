@@ -69,7 +69,9 @@ export default function (plop) {
                             '--import-alias',
                             '@/*',
                             '--yes',
-                        ]);
+                        ], {
+                            env: { ...process.env, npm_config_legacy_peer_deps: 'true' }
+                        });
                         spinner.succeed('Base Next.js app created!');
                         return 'Base Next.js app created';
                     } catch (error) {
@@ -111,13 +113,19 @@ export default function (plop) {
                     try {
                         // Standard Installs
                         if (installCmds.length > 0) {
-                            await execa('npm', ['install', '--legacy-peer-deps', ...installCmds], { cwd: projectPath });
+                            await execa('npm', ['install', '--legacy-peer-deps', ...installCmds], {
+                                cwd: projectPath,
+                                env: { ...process.env, npm_config_legacy_peer_deps: 'true' }
+                            });
                         }
 
                         // Dev Installs
                         if (devInstallCmds.length > 0) {
                             installSpinner.text = 'Installing devDependencies...';
-                            await execa('npm', ['install', '-D', '--legacy-peer-deps', ...devInstallCmds], { cwd: projectPath });
+                            await execa('npm', ['install', '-D', '--legacy-peer-deps', ...devInstallCmds], {
+                                cwd: projectPath,
+                                env: { ...process.env, npm_config_legacy_peer_deps: 'true' }
+                            });
                         }
                         installSpinner.succeed('Packages installed successfully!');
                     } catch (error) {
@@ -136,7 +144,11 @@ export default function (plop) {
                                     // Use 'inherit' so user can see/interact with shadow-style commands
                                     await execa(command, args, {
                                         cwd: projectPath,
-                                        stdio: 'inherit'
+                                        stdio: 'inherit',
+                                        env: {
+                                            ...process.env,
+                                            npm_config_legacy_peer_deps: 'true'
+                                        }
                                     });
                                 }
                             } catch (error) {
