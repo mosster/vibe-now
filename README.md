@@ -95,6 +95,24 @@ fs.writeFileSync(path.join(projectPath, 'CONFIG.md'), renderedMy);
 
 ---
 
+## 🤖 Prompting Examples for AI
+
+Since most development on this CLI is done using AI assistants (Cursor, Claude, etc.), here are some proven prompts to extend the tool:
+
+### To add a new library:
+> "I want to add `lucide-react` to the UI Helpers category. It should be enabled by default. Add it to the configuration in `lib/packages.js` and suggest a good engineering guidance string for the AGENTS.md file."
+
+### To add a new Mutual Exclusive option:
+> "Add a new 'Database Driver' category under Database. It should be a single-choice list between 'Postgres (pg)' and 'SQLite (libsql)'. Map this correctly in the `providerConfig` so it installs the right packages."
+
+### To add a new documentation template:
+> "Create a new template `templates/ENVIRONMENT.hbs` that lists required .env variables for the selected packages. Then, update `plopfile.js` to render this as `.env.example` in the project root."
+
+### To modify project validation:
+> "Update the project name validation in `plopfile.js` to also check if the name is too long (over 100 characters) and return a custom error message."
+
+---
+
 ## 📦 Publishing
 
 When you're ready to release a new version:

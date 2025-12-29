@@ -9,15 +9,54 @@ high-quality engineering standards.
 - **Styling**: Tailwind CSS (Utility-first)
 - **Components**: shadcn/ui (Radix UI primitives)
 
-## 🛠️ Tech Stack Consistency
+## 📁 Directory Structure
+```text
+.
+├── app/ # Next.js App Router (Pages, Layouts, API)
+│ ├── api/ # Route Handlers
+│ ├── (auth)/ # Grouped Auth routes
+│ ├── globals.css # Global styles & Tailwind directives
+│ └── layout.tsx # Root layout
+├── components/ # React Components
+│ ├── ui/ # shadcn/ui primitives (do not edit manually)
+│ └── shared/ # Reusable feature components
+├── hooks/ # Custom React Hooks
+├── lib/ # Shared utilities & configurations
+│ ├── utils.ts # Tailwind merge & clsx helper
+│ └── constants.ts # Global constants & config
+├── db/ # Database schema & migrations
+│ ├── schema.ts # Drizzle/Prisma schema definitions
+│ └── migrations/ # SQL migration files
+├── public/ # Static assets (images, fonts, etc.)
+├── scripts/ # Helper scripts (DB seeds, etc.)
+├── types/ # Global TypeScript interfaces
+└── AGENTS.md # This reference file
+```
+
+## 🎨 Design Principles
+- **Responsive Design**: Mobile-first approach using Tailwind's responsive prefixes (`sm:`, `md:`, `lg:`).
+- **Minimal Aesthetic**: Clean, spacious layouts with high contrast and premium typography (Inter/Geist).
+- **Dark Mode Support**: Use `dark:` variants for all colors. Ensure every component is legible in both themes.
+- **Component-Driven**: Prioritize shadcn components. Use `cn()` for merging classes.
+- **Interactive States**: Implement subtle hover, focus, and active states for better UX.
+
+## 🔤 Naming Conventions
+- **Files & Directories**: use `kebab-case` (e.g., `user-profile-card.tsx`).
+- **Components**: Use `PascalCase` (e.g., `export function UserCard()`).
+- **Variables & Functions**: Use `camelCase` (e.g., `const userData = ...`).
+- **Constants**: Use `SCREAMING_SNAKE_CASE` (e.g., `const API_RETRY_LIMIT = 3`).
+- **Descriptive Names**: Favor clarity over brevity (e.g., `isUserAuthenticated` instead of `isAuth`).
+
+## 🛠️ Tech Stack Consistency & Guidance
 {{#each selectedPackages}}
-- **{{this.name}}**: Use standard patterns as defined in official documentation.
+- **{{this.name}}**: {{#if this.guidance}}{{this.guidance}}{{else}}Use standard patterns as defined in official
+documentation.{{/if}}
 {{/each}}
 
 ## 🤖 AI Coding Rules
 
 ### 1. General Principles
-- **Conciseness**: Write clean, modular code. Avoid bloated components.
+- **Conciseness**: Write clean, modular code. Maintain DRY principles. Avoid bloated components.
 - **Type Safety**: Avoid `any`. Use Zod for runtime validation and TypeScript for compile-time safety.
 - **Modern Syntax**: Prefer functional components, hooks, and async/await.
 
