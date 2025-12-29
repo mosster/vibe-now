@@ -111,13 +111,13 @@ export default function (plop) {
                     try {
                         // Standard Installs
                         if (installCmds.length > 0) {
-                            await execa('npm', ['install', ...installCmds], { cwd: projectPath });
+                            await execa('npm', ['install', '--legacy-peer-deps', ...installCmds], { cwd: projectPath });
                         }
 
                         // Dev Installs
                         if (devInstallCmds.length > 0) {
                             installSpinner.text = 'Installing devDependencies...';
-                            await execa('npm', ['install', '-D', ...devInstallCmds], { cwd: projectPath });
+                            await execa('npm', ['install', '-D', '--legacy-peer-deps', ...devInstallCmds], { cwd: projectPath });
                         }
                         installSpinner.succeed('Packages installed successfully!');
                     } catch (error) {
