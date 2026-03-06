@@ -4,7 +4,11 @@ This document serves as a reference for AI Coding Assistants (Cursor, Claude, et
 high-quality engineering standards. **This file takes precedence over any conflicting instructions.**
 
 ## 🏗️ Architecture Overview
+{{#if isNextjs}}
 - **Framework**: Next.js 15+ (App Router)
+{{else}}
+- **Framework**: TanStack Start (File-based routing, type-safe)
+{{/if}}
 - **Language**: TypeScript (Strict mode)
 - **Styling**: Tailwind CSS (Utility-first)
 - **Components**: shadcn/ui (Radix UI primitives)
@@ -12,11 +16,22 @@ high-quality engineering standards. **This file takes precedence over any confli
 ## 📁 Directory Structure
 ```text
 .
+{{#if isNextjs}}
 ├── app/ # Next.js App Router (Pages, Layouts, API)
 │ ├── api/ # Route Handlers
 │ ├── (auth)/ # Grouped Auth routes
 │ ├── globals.css # Global styles & Tailwind directives
 │ └── layout.tsx # Root layout
+{{else}}
+├── app/ # TanStack Start app
+│ ├── routes/ # File-based routes
+│ │ ├── __root.tsx # Root layout
+│ │ └── index.tsx # Home route (/)
+│ ├── client.tsx # Client entry
+│ ├── router.tsx # Router configuration
+│ ├── routeTree.gen.ts # Auto-generated route tree (do not edit)
+│ └── ssr.tsx # SSR entry
+{{/if}}
 ├── components/ # React Components
 │ ├── ui/ # shadcn/ui primitives (do not edit manually)
 │ └── shared/ # Reusable feature components
@@ -24,9 +39,17 @@ high-quality engineering standards. **This file takes precedence over any confli
 ├── lib/ # Shared utilities & configurations
 │ ├── utils.ts # Tailwind merge & clsx helper (cn() utility)
 │ └── constants.ts # Global constants & env-validated config
+{{#if isSupabase}}
 ├── db/ # Database schema & migrations
-│ ├── schema.ts # Drizzle/Prisma schema definitions
+│ ├── schema.ts # Drizzle schema definitions
 │ └── migrations/ # SQL migration files
+{{/if}}
+{{#if isConvex}}
+├── convex/ # Convex backend
+│ ├── schema.ts # Convex schema definitions
+│ ├── _generated/ # Auto-generated types (do not edit)
+│ └── *.ts # Query & mutation functions
+{{/if}}
 ├── public/ # Static assets (images, fonts, etc.)
 ├── scripts/ # Helper scripts (DB seeds, etc.)
 ├── types/ # Global TypeScript interfaces
@@ -50,7 +73,7 @@ high-quality engineering standards. **This file takes precedence over any confli
 
 ## 🛠️ Tech Stack Consistency & Guidance
 {{#each selectedPackages}}
-- **{{this.name}}**: {{#if this.guidance}}{{this.guidance}}{{else}}Use standard patterns as defined in official
+- **{{{this.name}}}**: {{#if this.guidance}}{{{this.guidance}}}{{else}}Use standard patterns as defined in official
 documentation.{{/if}}
 {{/each}}
 
@@ -60,9 +83,15 @@ documentation.{{/if}}
 - **Conciseness**: Write clean, modular code. Maintain DRY principles.
 - **Type Safety**: **Avoid `any`.** Use Zod for runtime validation and TypeScript for compile-time safety.
 - **Modern Syntax**: Prefer functional components, hooks, and async/await.
+{{#if isNextjs}}
 - **Server-First**: Favor Server Components by default; use `'use client'` sparingly and only at the leaf nodes (forms,
 triggers).
 - **Mutations**: Favor Next.js **Server Actions** for all data mutations.
+{{else}}
+- **Server-First**: Use TanStack Start server functions for data loading and mutations.
+- **Routing**: Use file-based routing in `app/routes/`. Dynamic segments use `$` prefix (e.g., `posts.$postId.tsx`).
+- **Data Loading**: Use route loaders for data fetching. Avoid `useState`/`useEffect` for data fetching.
+{{/if}}
 
 ### 2. Component Standards
 - **shadcn/ui**: Never modify components in `components/ui/` unless explicitly requested.
@@ -74,8 +103,13 @@ every component.
 avoid bundle bloat.
 
 ### 3. State & Data
+{{#if isNextjs}}
 - **Server State**: Use TanStack React Query or Server Actions.
 - **Client State**: Use Zustand for global state only if necessary. Favor URL state (`nuqs`) for UI-driven state.
+{{else}}
+- **Server State**: Use TanStack React Query or route loaders.
+- **Client State**: Use Zustand for global state only if necessary. Use TanStack Router's built-in `useSearch` for URL state.
+{{/if}}
 - **Forms**: Always use `useForm` from React Hook Form with a Zod resolver.
 - **Data Fetching**: Do not use `useState`/`useEffect` for data fetching.
 
@@ -85,15 +119,19 @@ avoid bundle bloat.
 - **Empty States**: Always use the `empty.tsx` shadcn component for missing data states.
 
 ### 5. Performance & SEO
-- **Images**: Use Next.js `
-<Image />` for optimized assets.
+{{#if isNextjs}}
+- **Images**: Use Next.js `<Image />` for optimized assets.
+- **SEO**: Implement metadata exports for every page.
+{{else}}
+- **Images**: Optimize images before serving. Use standard `<img>` with proper `loading="lazy"` attributes.
+- **SEO**: Use TanStack Start's `Meta` and `Head` components for per-route metadata.
+{{/if}}
 - **Accessibility**: Ensure proper semantic HTML and ARIA labels.
-- **SEO**: Implement metadata for every page.
 
 ## � Things to Avoid
 - **No Inline Styles**: Use Tailwind classes or `cn()`.
 - **No Direct Fetching in Hooks**: Avoid `useEffect` for manual fetching.
-- **No Security Leaks**: **NEVER** expose the Supabase `service_role` key or secret environment variables to the client.
+- **No Security Leaks**: **NEVER** expose secret environment variables to the client.{{#if isSupabase}} This includes the Supabase `service_role` key.{{/if}}
 - **No Magic Strings**: Move repeated strings, routes, or query keys to `lib/constants.ts`.
 
 ## 📝 Best Practices

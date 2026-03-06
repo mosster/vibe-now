@@ -1,6 +1,6 @@
 {
   "name": "vibe-now",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "main": "index.js",
   "type": "module",
   "bin": {
@@ -16,7 +16,7 @@
   "keywords": [],
   "author": "Ed Moss <ed@mossified.com>",
   "license": "ISC",
-  "description": "Quickly scaffold a Next.js app with a curated stack",
+  "description": "Quickly scaffold a full-stack React app (Next.js or TanStack Start) with a curated stack",
   "dependencies": {
     "execa": "^8.0.1",
     "fs-extra": "^11.3.3",

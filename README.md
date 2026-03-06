@@ -1,35 +1,38 @@
 # Vibe Now 🌌
 
-A premium, interactive CLI wizard for scaffolding modern Next.js applications with a perfectly curated stack. Stop running manual `npm install` commands and start building within seconds.
+A premium, interactive CLI wizard for scaffolding modern full-stack React applications with a perfectly curated stack. Choose between **Next.js** or **TanStack Start**, pick your database, payments, and tooling — and start building within seconds.
 
 <img width="3680" height="4144" alt="Terminal" src="https://github.com/user-attachments/assets/4a6e97c4-778b-432f-8fe0-46f1193aa543" />
 
 ## ✨ Features
 
+- **Framework Choice**: Scaffold with **Next.js** (App Router) or **TanStack Start** (file-based routing, type-safe).
 - **Interactive Wizard**: A beautiful CLI experience powered by Plop.js and Inquirer.
 - **World-Class Feedback**: Engaged progress tracking with **Ora** spinners for a premium feel.
-- **Smart Scaffolding**: Automatically orchestrates `create-next-app` and library-specific initializations (like `shadcn init` and `biome init`).
-- **Dynamic Documentation**: Automatically generates a project-specific `README.md` and a comprehensive `AGENTS.md` to guide AI assistants (Cursor, Claude) on your stack and standards.
+- **Smart Scaffolding**: Automatically orchestrates `create-next-app` or `@tanstack/cli create` and library-specific initializations (like `shadcn init` and `biome init`).
+- **AI Project Support**: Generates **CLAUDE.md** (for Claude Code) or **AGENTS.md** (for Cursor/other AI assistants) tailored to your chosen stack.
+- **Auto `.env.example`**: Generates a `.env.example` with all required environment variables grouped by package.
 - **Template System**: Powered by Handlebars templates in the `templates/` directory for highly customized project initialization.
 - **Safety First**: Project name validation and directory check to prevent accidental overwrites.
 
 ## 🛠️ The Curated Stack
 
-### Base
-- **Framework**: Next.js (App Router, TypeScript, Tailwind CSS v4)
+### Framework (choose one)
+- **Next.js** (App Router, TypeScript, Tailwind CSS v4)
+- **TanStack Start** (File-based routing, TypeScript, Tailwind CSS v4)
 
 ### Optional Libraries
 - **State**: Zustand
 - **Validation**: Zod
 - **Data Fetching**: TanStack React Query
-- **UI & Components**: shadcn/ui (Initializes & adds all components automatically)
-- **Database & ORM**: Supabase JS client, Drizzle ORM (Postgres + Drizzle Kit)
+- **UI & Components**: shadcn/ui, next-themes (Next.js) / tanstack-theme-kit (TanStack)
+- **Database (choose one)**: Supabase + Drizzle ORM, Convex (Cloud), or Convex (Self-hosted)
 - **Authentication**: Better Auth
 - **Email**: Resend
-- **Payments**: Mutually exclusive selection between **Stripe** and **Polar.sh**
+- **Payments (choose one)**: Stripe or Polar.sh
 - **AI SDK**: Vercel AI SDK & OpenRouter Provider support
-- **Linting & Formatting**: Choose between **ESLint + Prettier** or **Biome** (High speed)
-- **UI Helpers**: nuqs, React Hook Form, Day.js, Lodash
+- **Linting & Formatting (choose one)**: ESLint + Prettier or Biome
+- **UI Helpers**: nuqs (Next.js only), React Hook Form, Day.js, Lodash
 
 ---
 
@@ -81,7 +84,7 @@ The CLI uses a group-based configuration for easy maintenance. To add a new libr
 ```
 
 ### 4. Adding New Templates
-The wizard currently generates `README.md` and `AGENTS.md` automatically. To add a new template:
+The wizard generates `README.md`, `CLAUDE.md` or `AGENTS.md`, and `.env.example` automatically. To add a new template:
 1. Create a Handlebars file in the `templates/` directory (e.g., `templates/CONFIG.md.hbs`).
 2. Open `plopfile.js`.
 3. Locate the `// 3. Generate README and AGENTS files` section.

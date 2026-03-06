@@ -1,0 +1,79 @@
+# {{projectName}}
+
+## Tech Stack
+{{#if isNextjs}}
+- **Framework**: Next.js 15+ (App Router)
+{{else}}
+- **Framework**: TanStack Start (File-based routing, type-safe)
+{{/if}}
+- **Language**: TypeScript (Strict mode)
+- **Styling**: Tailwind CSS (Utility-first)
+{{#each selectedPackages}}
+- **{{{this.name}}}**
+{{/each}}
+
+## Commands
+- Dev: `npm run dev`
+- Build: `npm run build`
+- Lint: `npm run lint`
+- Start: `npm start`
+
+## Directory Structure
+```
+{{#if isNextjs}}
+app/              # Pages, layouts, API route handlers
+{{else}}
+app/              # TanStack Start app
+  routes/         # File-based routes ($param for dynamic segments)
+    __root.tsx    # Root layout
+    index.tsx     # Home route (/)
+  client.tsx      # Client entry
+  router.tsx      # Router configuration
+  routeTree.gen.ts # Auto-generated route tree (do not edit)
+  ssr.tsx         # SSR entry
+{{/if}}
+components/
+  ui/             # shadcn/ui primitives (do not modify)
+  shared/         # Reusable feature components
+hooks/            # Custom React hooks (prefixed with use)
+lib/              # Utilities, constants, configs
+  utils.ts        # cn() helper (Tailwind merge + clsx)
+  constants.ts    # Global constants & env config
+{{#if isSupabase}}
+db/               # Database schema & migrations (Drizzle)
+  schema.ts       # Drizzle schema definitions
+  migrations/     # SQL migration files
+{{/if}}
+{{#if isConvex}}
+convex/           # Convex backend
+  schema.ts       # Convex schema definitions
+  _generated/     # Auto-generated types (do not edit)
+  *.ts            # Query & mutation functions
+{{/if}}
+types/            # Global TypeScript interfaces
+public/           # Static assets
+```
+
+## Code Conventions
+- Files & directories: `kebab-case`
+- Components: named exports, `PascalCase`
+- Variables & functions: `camelCase`
+- Constants: `SCREAMING_SNAKE_CASE`
+- Use `cn()` for all class name merging — never string concatenation
+{{#if isNextjs}}
+- Favor Server Components by default; use `'use client'` sparingly at leaf nodes
+- Use Server Actions for mutations
+{{else}}
+- Use TanStack Start server functions for data loading and mutations
+- Use file-based routing; dynamic segments use `$` prefix (e.g., `posts.$postId.tsx`)
+- Use TanStack Router's `useSearch` for type-safe URL state
+{{/if}}
+- Never use `useState`/`useEffect` for data fetching
+- Never expose secret env vars to the client{{#if isSupabase}} (e.g., Supabase `service_role` key){{/if}}{{#if isConvex}} (e.g., `CONVEX_SELF_HOSTED_ADMIN_KEY`){{/if}}
+
+## Library Guidance
+{{#each selectedPackages}}
+{{#if this.guidance}}
+- **{{{this.name}}}**: {{{this.guidance}}}
+{{/if}}
+{{/each}}

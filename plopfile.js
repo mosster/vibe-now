@@ -8,8 +8,8 @@ import { PACKAGE_GROUPS, ALL_ITEMS } from './lib/packages.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default function (plop) {
-    plop.setGenerator('next-app', {
-        description: 'Scaffold a custom Next.js app',
+    plop.setGenerator('vibe-app', {
+        description: 'Scaffold a custom full-stack React app',
         prompts: [
             {
                 type: 'input',
@@ -27,6 +27,22 @@ export default function (plop) {
                     return true;
                 }
             },
+            {
+                type: 'list',
+                name: 'framework',
+                message: 'Choose your framework:',
+                choices: [
+                    { name: 'Next.js (App Router, stable)', value: 'nextjs' },
+                    { name: 'TanStack Start (Full-stack, type-safe)', value: 'tanstack' },
+                ],
+                default: 'nextjs',
+            },
+            {
+                type: 'confirm',
+                name: 'isClaudeCode',
+                message: 'Is this a Claude Code project? (generates CLAUDE.md instead of AGENTS.md)',
+                default: true,
+            },
             ...PACKAGE_GROUPS.flatMap((group) => {
                 if (group.type === 'list') {
                     return [{
@@ -37,45 +53,64 @@ export default function (plop) {
                         default: group.default,
                     }];
                 }
-                return group.items.map(item => ({
-                    type: 'confirm',
-                    name: item.id,
-                    message: `${group.category}: Include ${item.name}?`,
-                    default: item.default,
-                }));
+                return group.items.map(item => {
+                    const prompt = {
+                        type: 'confirm',
+                        name: item.id,
+                        message: `${group.category}: Include ${item.name}?`,
+                        default: item.default,
+                    };
+                    if (item.frameworks) {
+                        prompt.when = (answers) => item.frameworks.includes(answers.framework);
+                    }
+                    return prompt;
+                });
             }),
         ],
         actions: (data) => {
             const actions = [];
             const projectPath = path.join(process.cwd(), data.projectName);
 
-            // 1. Create Base Next.js App
+            // 1. Create Base App (Next.js or TanStack Start)
             actions.push({
                 type: 'customSync',
                 async action(answers) {
+                    const isTanStack = answers.framework === 'tanstack';
+                    const label = isTanStack ? 'TanStack Start' : 'Next.js';
                     const spinner = ora({
-                        text: `Creating base Next.js app in ${answers.projectName}...`,
+                        text: `Creating base ${label} app in ${answers.projectName}...`,
                         color: 'cyan',
                     }).start();
 
                     try {
-                        await execa('npx', [
-                            'create-next-app@latest',
-                            answers.projectName,
-                            '--ts',
-                            '--tailwind',
-                            '--app',
-                            '--eslint',
-                            '--import-alias',
-                            '@/*',
-                            '--yes',
-                        ], {
-                            env: { ...process.env, npm_config_legacy_peer_deps: 'true' }
-                        });
-                        spinner.succeed('Base Next.js app created!');
-                        return 'Base Next.js app created';
+                        if (isTanStack) {
+                            await execa('npx', [
+                                '@tanstack/cli', 'create',
+                                answers.projectName,
+                                '-y',
+                                '--tailwind',
+                            ], {
+                                env: { ...process.env, npm_config_legacy_peer_deps: 'true' }
+                            });
+                        } else {
+                            await execa('npx', [
+                                'create-next-app@latest',
+                                answers.projectName,
+                                '--ts',
+                                '--tailwind',
+                                '--app',
+                                '--eslint',
+                                '--import-alias',
+                                '@/*',
+                                '--yes',
+                            ], {
+                                env: { ...process.env, npm_config_legacy_peer_deps: 'true' }
+                            });
+                        }
+                        spinner.succeed(`Base ${label} app created!`);
+                        return `Base ${label} app created`;
                     } catch (error) {
-                        spinner.fail('Failed to create Next.js app');
+                        spinner.fail(`Failed to create ${label} app`);
                         throw error;
                     }
                 },
@@ -88,14 +123,18 @@ export default function (plop) {
                     // Collect standard selections
                     const selectedPackages = ALL_ITEMS.filter(item => answers[item.id]);
 
-                    // Collect list-based selections (e.g. Payments)
+                    // Collect list-based selections (e.g. Payments, Database, Linting)
+                    const isNextjs = answers.framework === 'nextjs';
                     PACKAGE_GROUPS.filter(g => g.type === 'list').forEach(group => {
                         const choice = answers[group.id];
                         if (choice && choice !== 'none' && group.providerConfig[choice]) {
-                            selectedPackages.push({
-                                ...group.providerConfig[choice],
-                                id: `${group.id}_${choice}` // unique internal id
-                            });
+                            const config = { ...group.providerConfig[choice] };
+                            // Merge framework-specific dev dependencies
+                            if (isNextjs && config.devInstallNextjs) {
+                                config.devInstall = [...(config.devInstall || []), ...config.devInstallNextjs];
+                            }
+                            config.id = `${group.id}_${choice}`;
+                            selectedPackages.push(config);
                         }
                     });
 
@@ -165,21 +204,42 @@ export default function (plop) {
                     }).start();
 
                     try {
+                        const databaseChoice = answers.database || 'none';
+                        const isTanStack = answers.framework === 'tanstack';
                         const templateData = {
                             projectName: answers.projectName === '.' ? path.basename(projectPath) : answers.projectName,
-                            selectedPackages
+                            selectedPackages,
+                            isSupabase: databaseChoice === 'supabase',
+                            isConvex: databaseChoice === 'convex_cloud' || databaseChoice === 'convex_self',
+                            isNextjs: !isTanStack,
+                            isTanStack,
                         };
 
                         const readmeTmpl = fs.readFileSync(path.join(__dirname, 'templates/README.md.hbs'), 'utf8');
-                        const agentsTmpl = fs.readFileSync(path.join(__dirname, 'templates/AGENTS.md.hbs'), 'utf8');
-
                         const renderedReadme = plop.renderString(readmeTmpl, templateData);
-                        const renderedAgents = plop.renderString(agentsTmpl, templateData);
-
                         fs.writeFileSync(path.join(projectPath, 'README.md'), renderedReadme);
-                        fs.writeFileSync(path.join(projectPath, 'AGENTS.md'), renderedAgents);
 
-                        docSpinner.succeed('Documentation and AGENTS.md generated!');
+                        if (answers.isClaudeCode) {
+                            const claudeTmpl = fs.readFileSync(path.join(__dirname, 'templates/CLAUDE.md.hbs'), 'utf8');
+                            const renderedClaude = plop.renderString(claudeTmpl, templateData);
+                            fs.writeFileSync(path.join(projectPath, 'CLAUDE.md'), renderedClaude);
+                        } else {
+                            const agentsTmpl = fs.readFileSync(path.join(__dirname, 'templates/AGENTS.md.hbs'), 'utf8');
+                            const renderedAgents = plop.renderString(agentsTmpl, templateData);
+                            fs.writeFileSync(path.join(projectPath, 'AGENTS.md'), renderedAgents);
+                        }
+
+                        // Generate .env.example if any selected packages have envVars
+                        const hasEnvVars = selectedPackages.some(p => p.envVars && p.envVars.length > 0);
+                        if (hasEnvVars) {
+                            const envTmpl = fs.readFileSync(path.join(__dirname, 'templates/env.example.hbs'), 'utf8');
+                            const renderedEnv = plop.renderString(envTmpl, templateData);
+                            fs.writeFileSync(path.join(projectPath, '.env.example'), renderedEnv);
+                        }
+
+                        const docFile = answers.isClaudeCode ? 'CLAUDE.md' : 'AGENTS.md';
+                        const envNote = hasEnvVars ? ', .env.example' : '';
+                        docSpinner.succeed(`Documentation, ${docFile}${envNote} generated!`);
                     } catch (error) {
                         docSpinner.fail('Failed to generate documentation files');
                         console.error(error);

@@ -1,54 +1,155 @@
-# Custom CLI Wizard Plan (Plop.js + Next.js Stack)
+# Vibe Now — v2 Plan
 
-This project has been successfully implemented and released as **Vibe Now**.
+## Overview
 
-## 1. Project Overview
-A custom CLI (`vibe-now`) that:
-- Prompts for project name with validation.
-- Dynamically generates interactive prompts group by category.
-- Orchestrates project creation and dependency installation using a configuration-driven approach.
-- Generates dynamic documentation (AGENTS.md and README.md).
+Four new features: framework choice (Next.js vs TanStack Start), AI editor context (CLAUDE.md vs AGENTS.md), database provider selection (Supabase vs Convex), and auto-generated `.env.example` files.
 
-## 2. Core Dependencies
-- **plop**: Generator framework.
-- **inquirer**: Interactive prompts.
-- **execa**: Process execution.
-- **ora**: Premium progress spinners.
-- **handlebars**: Template engine for file generation.
+## Implementation Status
 
-## 3. Configuration-Driven Architecture (DRY & Scalable)
-The CLI uses a `PACKAGE_GROUPS` array in `lib/packages.js`. Adding a new package or category is fully decoupled from the core logic.
+- [x] **Feature 1: Framework Selection** — Next.js vs TanStack Start
+- [x] **Feature 2: Claude Code Repo** — CLAUDE.md vs AGENTS.md
+- [x] **Feature 3: Database Provider** — Supabase+Drizzle vs Convex (Cloud/Self-hosted)
+- [x] **Feature 4: .env.example Generation** — Auto-generated from selected packages
 
-## 4. Implementation Details & Commands
+---
 
-### Base Next.js Setup
-- **Command**: `npx create-next-app@latest`
+## Feature 1: Framework Selection (Next.js vs TanStack Start) — DONE
 
-### Features Implemented
-- **AI SDK**: Vercel AI SDK & OpenRouter.
-- **Linters**: ESLint/Prettier and Biome selection.
-- **UI & Helpers**: shadcn/ui, nuqs, hook-form, dayjs, lodash.
-- **Database**: Supabase & Drizzle ORM.
-- **Payments**: Stripe & Polar.sh.
-- **Authentication**: Better Auth.
+**Prompt**: List choice, asked after project name.
 
-## 5. Implementation Status
+**Files changed:**
+- `plopfile.js` — New `framework` list prompt, conditional scaffold command (`create-next-app` vs `@tanstack/cli create`), `when` callbacks on confirm prompts to filter by framework, `devInstallNextjs` merging for ESLint, `isNextjs`/`isTanStack` template flags
+- `lib/packages.js` — Added `frameworks` field to `next-themes` (nextjs-only), `nuqs` (nextjs-only); added new `tanstack-theme-kit` package (tanstack-only); moved `eslint-config-next` into `devInstallNextjs` field
+- `templates/AGENTS.md.hbs` — Conditional architecture overview, directory structure (App Router vs TanStack routes), coding rules, state/data patterns, SEO guidance
+- `templates/CLAUDE.md.hbs` — Same conditional sections
+- `templates/README.md.hbs` — Conditional core framework listing
 
-- [x] **Phase 1: Environment Setup** - Completed with ESM support and binary linking.
-- [x] **Phase 2: Configuration Hub** - Scalable group-based configuration implemented.
-- [x] **Phase 3: CLI Entry Point** - `index.js` and `plopfile.js` logic finalized.
-- [x] **Phase 4: Premium UI** - **Ora** spinners integrated for all major steps.
-- [x] **Phase 5: Smart Validation** - URL-safe project names and empty directory checks.
-- [x] **Phase 6: Dynamic Documentation** - Handlebars-based `README.md` and `AGENTS.md` generation.
+### Package compatibility matrix
 
-## 6. Project Structure
-```text
+| Package | Next.js | TanStack Start | Notes |
+|---|---|---|---|
+| zustand | Yes | Yes | Framework-agnostic |
+| zod | Yes | Yes | Framework-agnostic |
+| @tanstack/react-query | Yes | Yes | First-party TanStack |
+| shadcn/ui | Yes | Yes | Official support both |
+| next-themes | Yes | **No** | Use `tanstack-theme-kit` instead |
+| better-auth | Yes | Yes | Framework-agnostic |
+| resend | Yes | Yes | Server-side only |
+| stripe / polar | Yes | Yes | Server-side SDKs |
+| ai (Vercel AI SDK) | Yes | Yes | Core works; Next.js streaming helpers don't apply |
+| nuqs | Yes | **No** | TanStack Router has built-in `useSearch` |
+| react-hook-form | Yes | Yes | Framework-agnostic |
+| eslint-config-next | Yes | **No** | Next.js-specific; omitted for TanStack |
+| biome | Yes | Yes | Framework-agnostic |
+
+### TanStack CLI reference
+```bash
+npx @tanstack/cli create my-app -y --tailwind   # Non-interactive with Tailwind
+npx @tanstack/cli create --list-add-ons          # List available add-ons
+npx @tanstack/cli create my-app --add-ons shadcn # With add-ons
+```
+
+---
+
+## Feature 2: Claude Code Repo (AGENTS.md → CLAUDE.md) — DONE
+
+**Prompt**: Confirm after framework selection, defaults to yes.
+
+**Files changed:**
+- `plopfile.js` — New `isClaudeCode` confirm prompt, conditional rendering of CLAUDE.md vs AGENTS.md
+- `templates/CLAUDE.md.hbs` — New concise template (~50 lines) following Anthropic conventions: tech stack, commands, directory structure, code conventions, per-library guidance. Omits verbose "AI Coding Rules" section that AGENTS.md has.
+
+### CLAUDE.md conventions
+- Under 200 lines, shorter is better
+- Structure: WHAT (tech/stack) → WHY (purpose) → HOW (commands/workflow)
+- Put detailed docs in separate files (progressive disclosure)
+
+---
+
+## Feature 3: Database Provider (Supabase vs Convex) — DONE
+
+**Prompt**: List choice replacing the old individual Supabase/Drizzle confirms.
+
+**Files changed:**
+- `lib/packages.js` — Refactored `Database & ORM` from confirm-based (`items`) to list-based (`type: 'list'`) with `providerConfig` for Supabase+Drizzle, Convex Cloud, Convex Self-hosted. Added `envVars` to all three.
+- `plopfile.js` — Added `isSupabase`/`isConvex` booleans to templateData
+- `templates/AGENTS.md.hbs` — Conditional `db/` vs `convex/` directory structure, conditional security warnings
+- `templates/CLAUDE.md.hbs` — Same conditional updates
+
+### Key technical notes
+- Convex Cloud and Self-hosted use the same `convex` npm package
+- Self-hosted requires Docker + `CONVEX_SELF_HOSTED_URL` and `CONVEX_SELF_HOSTED_ADMIN_KEY` env vars
+- Convex replaces Drizzle entirely (own schema system in `convex/schema.ts`)
+- Better Auth has an official Convex adapter (`@convex-dev/better-auth`)
+
+---
+
+## Feature 4: .env.example Generation — DONE
+
+**No prompt** — auto-generated when any selected package has env vars.
+
+**Files changed:**
+- `lib/packages.js` — Added `envVars` arrays to: Supabase (4 vars), Convex Cloud (1), Convex Self-hosted (2), Better Auth (2), Resend (1), Stripe (3), Polar (2), AI SDK (1), OpenRouter (1)
+- `templates/env.example.hbs` — New template rendering vars grouped by package with comments
+- `plopfile.js` — Conditional `.env.example` generation, success message includes env note
+
+---
+
+## Other fixes applied
+- Fixed old "quick-vibe" footer in `templates/README.md.hbs` → "vibe-now"
+- Renamed generator from `next-app` to `vibe-app`
+
+---
+
+## Project Structure (current)
+```
 vibe-cli/
 ├── lib/
-│   └── packages.js     # Centralized configuration
-├── templates/          # HBS templates (README, AGENTS)
-├── index.js            # CLI Entry point 
-├── plopfile.js         # Plop logic & Action orchestrator
+│   └── packages.js          # Package configuration with frameworks, envVars
+├── templates/
+│   ├── README.md.hbs         # Framework-aware README template
+│   ├── AGENTS.md.hbs         # Full AI agent guidance (Cursor, Copilot, etc.)
+│   ├── CLAUDE.md.hbs         # Concise Claude Code memory file
+│   └── env.example.hbs       # .env.example grouped by package
+├── index.js                   # CLI entry point (Plop bootstrap)
+├── plopfile.js                # Prompts, actions, scaffold orchestration
 ├── package.json
+├── PLAN.md
 └── README.md
 ```
+
+---
+
+## Testing TODO
+
+- [ ] Run `npx @tanstack/cli create test-app -y --tailwind` to verify non-interactive mode works
+- [ ] Run `npx convex dev` first-run to check if interactive input is needed
+- [ ] Run full wizard with Next.js + Supabase + Claude Code selection
+- [ ] Run full wizard with TanStack Start + Convex Cloud + AGENTS.md selection
+- [ ] Verify `.env.example` generates correctly with multiple packages
+- [ ] Verify framework-filtered prompts (next-themes hidden for TanStack, nuqs hidden for TanStack, tanstack-theme-kit hidden for Next.js)
+- [ ] Decide: should TanStack Start projects use `--add-ons` flags instead of manual npm install?
+
+---
+
+## Future Enhancements (Post v2)
+
+### High-value
+- **Testing**: Vitest + React Testing Library, Playwright/Cypress for E2E
+- **Analytics**: PostHog, Vercel Analytics, or Plausible
+- **File/Image uploads**: UploadThing or Cloudinary
+- **Caching/Rate limiting**: Upstash Redis
+
+### Nice-to-haves
+- **Monitoring/Error tracking**: Sentry
+- **Background jobs**: Inngest or Trigger.dev
+- **Type-safe API layer**: tRPC (natural fit with TanStack Start)
+- **Icons**: `lucide-react` (already referenced in AGENTS.md guidance but not installed)
+
+### Infra/DX
+- **Docker**: Generate Dockerfile + docker-compose.yml
+- **CI/CD**: GitHub Actions workflow template (lint, test, build)
+- **Deployment target**: Vercel, Netlify, Railway, Fly.io config files
+
+### Framework-aware env vars
+- Use `VITE_` prefix instead of `NEXT_PUBLIC_` for TanStack Start client-exposed vars (Supabase URL, Stripe publishable key)
