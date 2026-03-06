@@ -87,8 +87,10 @@ export default function (plop) {
                             await execa('npx', [
                                 '@tanstack/cli', 'create',
                                 answers.projectName,
-                                '-y',
                                 '--tailwind',
+                                '--no-examples',
+                                '--no-git',
+                                '--no-toolchain',
                             ], {
                                 env: { ...process.env, npm_config_legacy_peer_deps: 'true' }
                             });
