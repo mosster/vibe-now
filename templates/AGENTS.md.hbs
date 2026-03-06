@@ -22,16 +22,6 @@ high-quality engineering standards. **This file takes precedence over any confli
 │ ├── (auth)/ # Grouped Auth routes
 │ ├── globals.css # Global styles & Tailwind directives
 │ └── layout.tsx # Root layout
-{{else}}
-├── app/ # TanStack Start app
-│ ├── routes/ # File-based routes
-│ │ ├── __root.tsx # Root layout
-│ │ └── index.tsx # Home route (/)
-│ ├── client.tsx # Client entry
-│ ├── router.tsx # Router configuration
-│ ├── routeTree.gen.ts # Auto-generated route tree (do not edit)
-│ └── ssr.tsx # SSR entry
-{{/if}}
 ├── components/ # React Components
 │ ├── ui/ # shadcn/ui primitives (do not edit manually)
 │ └── shared/ # Reusable feature components
@@ -39,6 +29,23 @@ high-quality engineering standards. **This file takes precedence over any confli
 ├── lib/ # Shared utilities & configurations
 │ ├── utils.ts # Tailwind merge & clsx helper (cn() utility)
 │ └── constants.ts # Global constants & env-validated config
+{{else}}
+├── src/ # Source root
+│ ├── routes/ # File-based routes ($param for dynamic segments)
+│ │ ├── __root.tsx # Root layout
+│ │ └── index.tsx # Home route (/)
+│ ├── components/ # React Components
+│ │ ├── ui/ # shadcn/ui primitives (do not edit manually)
+│ │ └── shared/ # Reusable feature components
+│ ├── hooks/ # Custom React Hooks (prefixed with use)
+│ ├── lib/ # Shared utilities & configurations
+│ │ ├── utils.ts # Tailwind merge & clsx helper (cn() utility)
+│ │ └── constants.ts # Global constants & env-validated config
+│ ├── client.tsx # Client entry
+│ ├── router.tsx # Router configuration
+│ ├── routeTree.gen.ts # Auto-generated route tree (do not edit)
+│ └── ssr.tsx # SSR entry
+{{/if}}
 {{#if isSupabase}}
 ├── db/ # Database schema & migrations
 │ ├── schema.ts # Drizzle schema definitions
@@ -89,15 +96,15 @@ triggers).
 - **Mutations**: Favor Next.js **Server Actions** for all data mutations.
 {{else}}
 - **Server-First**: Use TanStack Start server functions for data loading and mutations.
-- **Routing**: Use file-based routing in `app/routes/`. Dynamic segments use `$` prefix (e.g., `posts.$postId.tsx`).
+- **Routing**: Use file-based routing in `src/routes/`. Dynamic segments use `$` prefix (e.g., `posts.$postId.tsx`).
 - **Data Loading**: Use route loaders for data fetching. Avoid `useState`/`useEffect` for data fetching.
 {{/if}}
 
 ### 2. Component Standards
-- **shadcn/ui**: Never modify components in `components/ui/` unless explicitly requested.
+- **shadcn/ui**: Never modify components in `{{#if isTanStack}}src/{{/if}}components/ui/` unless explicitly requested.
 - **Utility Styling**: Use the `cn()` utility **everywhere**. Never concatenate strings or use template literals for
 class names.
-- **Placement**: Place reusable components in `components/shared/`. Include a formal TypeScript props interface for
+- **Placement**: Place reusable components in `{{#if isTanStack}}src/{{/if}}components/shared/`. Include a formal TypeScript props interface for
 every component.
 - **Cleanup**: If using `lodash`, only import specific functions (e.g., `import debounce from "lodash/debounce"`) to
 avoid bundle bloat.
@@ -132,7 +139,7 @@ avoid bundle bloat.
 - **No Inline Styles**: Use Tailwind classes or `cn()`.
 - **No Direct Fetching in Hooks**: Avoid `useEffect` for manual fetching.
 - **No Security Leaks**: **NEVER** expose secret environment variables to the client.{{#if isSupabase}} This includes the Supabase `service_role` key.{{/if}}
-- **No Magic Strings**: Move repeated strings, routes, or query keys to `lib/constants.ts`.
+- **No Magic Strings**: Move repeated strings, routes, or query keys to `{{#if isTanStack}}src/{{/if}}lib/constants.ts`.
 
 ## 📝 Best Practices
 - **Rule of Three**: If you repeat logic three times, abstract it into a shared component, hook, or utility.

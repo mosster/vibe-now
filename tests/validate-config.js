@@ -195,6 +195,7 @@ const renderedTanstack = Handlebars.compile(claudeTmpl)(tanstackConvexData);
 assert(renderedTanstack.includes('TanStack Start'), 'CLAUDE.md contains TanStack Start for tanstack framework');
 assert(renderedTanstack.includes('convex/'), 'CLAUDE.md contains convex/ for Convex');
 assert(!renderedTanstack.includes('db/'), 'CLAUDE.md does NOT contain db/ for Convex');
+assert(renderedTanstack.includes('src/'), 'CLAUDE.md contains src/ for TanStack');
 assert(renderedTanstack.includes('routes/'), 'CLAUDE.md contains routes/ for TanStack');
 
 const envTmpl = fs.readFileSync(path.join(rootDir, 'templates/env.example.hbs'), 'utf8');

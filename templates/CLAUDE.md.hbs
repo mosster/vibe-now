@@ -22,16 +22,6 @@
 ```
 {{#if isNextjs}}
 app/              # Pages, layouts, API route handlers
-{{else}}
-app/              # TanStack Start app
-  routes/         # File-based routes ($param for dynamic segments)
-    __root.tsx    # Root layout
-    index.tsx     # Home route (/)
-  client.tsx      # Client entry
-  router.tsx      # Router configuration
-  routeTree.gen.ts # Auto-generated route tree (do not edit)
-  ssr.tsx         # SSR entry
-{{/if}}
 components/
   ui/             # shadcn/ui primitives (do not modify)
   shared/         # Reusable feature components
@@ -39,6 +29,23 @@ hooks/            # Custom React hooks (prefixed with use)
 lib/              # Utilities, constants, configs
   utils.ts        # cn() helper (Tailwind merge + clsx)
   constants.ts    # Global constants & env config
+{{else}}
+src/              # Source root
+  routes/         # File-based routes ($param for dynamic segments)
+    __root.tsx    # Root layout
+    index.tsx     # Home route (/)
+  components/
+    ui/           # shadcn/ui primitives (do not modify)
+    shared/       # Reusable feature components
+  hooks/          # Custom React hooks (prefixed with use)
+  lib/            # Utilities, constants, configs
+    utils.ts      # cn() helper (Tailwind merge + clsx)
+    constants.ts  # Global constants & env config
+  client.tsx      # Client entry
+  router.tsx      # Router configuration
+  routeTree.gen.ts # Auto-generated route tree (do not edit)
+  ssr.tsx         # SSR entry
+{{/if}}
 {{#if isSupabase}}
 db/               # Database schema & migrations (Drizzle)
   schema.ts       # Drizzle schema definitions
