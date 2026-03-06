@@ -57,6 +57,9 @@ high-quality engineering standards. **This file takes precedence over any confli
 │ ├── _generated/ # Auto-generated types (do not edit)
 │ └── *.ts # Query & mutation functions
 {{/if}}
+{{#if isPlaywright}}
+├── e2e/ # Playwright E2E tests
+{{/if}}
 ├── public/ # Static assets (images, fonts, etc.)
 ├── scripts/ # Helper scripts (DB seeds, etc.)
 ├── types/ # Global TypeScript interfaces

@@ -10,6 +10,7 @@ Four new features: framework choice (Next.js vs TanStack Start), AI editor conte
 - [x] **Feature 2: Claude Code Repo** — CLAUDE.md vs AGENTS.md
 - [x] **Feature 3: Database Provider** — Supabase+Drizzle vs Convex (Cloud/Self-hosted)
 - [x] **Feature 4: .env.example Generation** — Auto-generated from selected packages
+- [x] **Feature 5: Testing Frameworks** — Vitest + React Testing Library, Playwright, or both
 
 ---
 
@@ -95,6 +96,25 @@ npx @tanstack/cli create my-app --add-ons shadcn # With add-ons
 
 ---
 
+## Feature 5: Testing Frameworks — DONE
+
+**Prompt**: List choice with 4 options: None, Vitest + RTL, Playwright, Both.
+
+**Files changed:**
+- `lib/packages.js` — New `testing` list group with `providerConfig` for vitest, playwright, both. Framework-specific `devInstallNextjs` for `@vitejs/plugin-react` and `vite-tsconfig-paths`. Playwright has `commands` for browser install.
+- `plopfile.js` — Added `isVitest`/`isPlaywright` booleans to templateData
+- `templates/CLAUDE.md.hbs` — Conditional test commands and `e2e/` directory
+- `templates/AGENTS.md.hbs` — Conditional `e2e/` directory
+- `tests/validate-config.js` — 14 new assertions for testing group
+
+### Key technical notes
+- Vitest on Next.js needs `@vitejs/plugin-react` and `vite-tsconfig-paths` (not Vite-native)
+- Vitest on TanStack Start does NOT need those extras (already Vite-based)
+- Playwright installs Chromium only by default (`--with-deps chromium`) to keep install fast
+- Async Server Components cannot be unit tested with Vitest — E2E only
+
+---
+
 ## Other fixes applied
 - Fixed old "quick-vibe" footer in `templates/README.md.hbs` → "vibe-now"
 - Renamed generator from `next-app` to `vibe-app`
@@ -135,7 +155,6 @@ vibe-cli/
 ## Future Enhancements (Post v2)
 
 ### High-value
-- **Testing**: Vitest + React Testing Library, Playwright/Cypress for E2E
 - **Analytics**: PostHog, Vercel Analytics, or Plausible
 - **File/Image uploads**: UploadThing or Cloudinary
 - **Caching/Rate limiting**: Upstash Redis

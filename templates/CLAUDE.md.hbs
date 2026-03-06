@@ -17,6 +17,14 @@
 - Build: `npm run build`
 - Lint: `npm run lint`
 - Start: `npm start`
+{{#if isVitest}}
+- Unit Test: `npx vitest`
+- Unit Test (watch): `npx vitest --watch`
+{{/if}}
+{{#if isPlaywright}}
+- E2E Test: `npx playwright test`
+- E2E Test (UI): `npx playwright test --ui`
+{{/if}}
 
 ## Directory Structure
 ```
@@ -56,6 +64,9 @@ convex/           # Convex backend
   schema.ts       # Convex schema definitions
   _generated/     # Auto-generated types (do not edit)
   *.ts            # Query & mutation functions
+{{/if}}
+{{#if isPlaywright}}
+e2e/              # Playwright E2E tests
 {{/if}}
 types/            # Global TypeScript interfaces
 public/           # Static assets

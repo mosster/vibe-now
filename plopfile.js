@@ -207,6 +207,7 @@ export default function (plop) {
 
                     try {
                         const databaseChoice = answers.database || 'none';
+                        const testingChoice = answers.testing || 'none';
                         const isTanStack = answers.framework === 'tanstack';
                         const templateData = {
                             projectName: answers.projectName === '.' ? path.basename(projectPath) : answers.projectName,
@@ -215,6 +216,8 @@ export default function (plop) {
                             isConvex: databaseChoice === 'convex_cloud' || databaseChoice === 'convex_self',
                             isNextjs: !isTanStack,
                             isTanStack,
+                            isVitest: testingChoice === 'vitest' || testingChoice === 'both',
+                            isPlaywright: testingChoice === 'playwright' || testingChoice === 'both',
                         };
 
                         const readmeTmpl = fs.readFileSync(path.join(__dirname, 'templates/README.md.hbs'), 'utf8');

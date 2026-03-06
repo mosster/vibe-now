@@ -32,6 +32,7 @@ A premium, interactive CLI wizard for scaffolding modern full-stack React applic
 - **Payments (choose one)**: Stripe or Polar.sh
 - **AI SDK**: Vercel AI SDK & OpenRouter Provider support
 - **Linting & Formatting (choose one)**: ESLint + Prettier or Biome
+- **Testing (choose one)**: Vitest + React Testing Library, Playwright, or both
 - **UI Helpers**: nuqs (Next.js only), React Hook Form, Day.js, Lodash
 
 ---

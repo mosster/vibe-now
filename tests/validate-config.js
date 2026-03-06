@@ -219,6 +219,28 @@ assert(dbGroup.providerConfig.supabase.devInstall?.includes('drizzle-kit'), 'Sup
 assert(!dbGroup.providerConfig.convex_cloud.devInstall, 'Convex Cloud has no devDeps');
 
 // ============================================
+// Test 7: Testing group structure
+// ============================================
+console.log('\n🧪 Test 7: Testing group structure\n');
+
+const testGroup = PACKAGE_GROUPS.find(g => g.id === 'testing');
+assert(testGroup, 'Testing group exists');
+assert(testGroup.type === 'list', 'Testing is a list-type group');
+assert(testGroup.choices.length === 4, 'Testing has 4 choices (none, vitest, playwright, both)');
+assert(testGroup.providerConfig.vitest, 'Vitest provider config exists');
+assert(testGroup.providerConfig.playwright, 'Playwright provider config exists');
+assert(testGroup.providerConfig.both, 'Both provider config exists');
+assert(testGroup.providerConfig.vitest.devInstall?.includes('vitest'), 'Vitest config includes vitest');
+assert(testGroup.providerConfig.vitest.devInstall?.includes('@testing-library/react'), 'Vitest config includes @testing-library/react');
+assert(testGroup.providerConfig.vitest.devInstallNextjs?.includes('@vitejs/plugin-react'), 'Vitest has Next.js-specific @vitejs/plugin-react');
+assert(testGroup.providerConfig.playwright.devInstall?.includes('@playwright/test'), 'Playwright config includes @playwright/test');
+assert(testGroup.providerConfig.playwright.commands?.length > 0, 'Playwright has init commands');
+assert(testGroup.providerConfig.both.devInstall?.includes('vitest'), 'Both config includes vitest');
+assert(testGroup.providerConfig.both.devInstall?.includes('@playwright/test'), 'Both config includes @playwright/test');
+assert(testGroup.providerConfig.both.devInstallNextjs?.includes('@vitejs/plugin-react'), 'Both has Next.js-specific @vitejs/plugin-react');
+assert(testGroup.providerConfig.both.commands?.length > 0, 'Both config has Playwright init commands');
+
+// ============================================
 // Summary
 // ============================================
 console.log(`\n${'='.repeat(40)}`);
