@@ -37,6 +37,18 @@ hooks/            # Custom React hooks (prefixed with use)
 lib/              # Utilities, constants, configs
   utils.ts        # cn() helper (Tailwind merge + clsx)
   constants.ts    # Global constants & env config
+{{#if isORPC}}
+  orpc.ts         # Typed oRPC client (+ TanStack Query helpers)
+{{/if}}
+{{#if isTRPC}}
+  trpc/           # tRPC client (+ TanStack Query hooks)
+{{/if}}
+{{#if isORPC}}
+server/orpc/      # oRPC router & handlers (RPC /api/rpc, REST + docs /api/v1)
+{{/if}}
+{{#if isTRPC}}
+server/trpc/      # tRPC init, router & handler (/api/trpc)
+{{/if}}
 {{else}}
 src/              # Source root
   routes/         # File-based routes ($param for dynamic segments)
@@ -49,6 +61,18 @@ src/              # Source root
   lib/            # Utilities, constants, configs
     utils.ts      # cn() helper (Tailwind merge + clsx)
     constants.ts  # Global constants & env config
+{{#if isORPC}}
+    orpc.ts       # Typed oRPC client (+ TanStack Query helpers)
+{{/if}}
+{{#if isTRPC}}
+    trpc/         # tRPC client (+ TanStack Query hooks)
+{{/if}}
+{{#if isORPC}}
+  server/orpc/    # oRPC router & handlers (RPC /api/rpc, REST + docs /api/v1)
+{{/if}}
+{{#if isTRPC}}
+  server/trpc/    # tRPC init, router & handler (/api/trpc)
+{{/if}}
   client.tsx      # Client entry
   router.tsx      # Router configuration
   routeTree.gen.ts # Auto-generated route tree (do not edit)

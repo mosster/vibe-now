@@ -1,0 +1,13 @@
+import * as z from 'zod';
+import { createCallerFactory, createTRPCRouter, publicProcedure } from './init';
+
+export const appRouter = createTRPCRouter({
+  hello: publicProcedure
+    .input(z.object({ name: z.string().min(1).default('world') }))
+    .query(({ input }) => ({ message: `Hello, ${input.name}!` })),
+});
+
+export type AppRouter = typeof appRouter;
+
+// Call procedures directly from server-only code without an HTTP round trip
+export const createCaller = createCallerFactory(appRouter);

@@ -27,6 +27,7 @@ A premium, interactive CLI wizard for scaffolding modern full-stack React applic
 - **Data Fetching**: TanStack React Query
 - **UI & Components**: shadcn/ui, next-themes (Next.js) / tanstack-theme-kit (TanStack)
 - **Database (choose one)**: Supabase + Drizzle ORM, Convex (Cloud), Convex (Self-hosted), SQLite via Turso + Drizzle, or self-hosted SQLite/libSQL + Drizzle
+- **API Layer (choose one)**: oRPC (typed RPC + REST with an OpenAPI spec & docs) or tRPC, with a working example router (skipped for Convex)
 - **Authentication**: Better Auth
 - **Email**: Resend
 - **Payments (choose one)**: Stripe or Polar.sh

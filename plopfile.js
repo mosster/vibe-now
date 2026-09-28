@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import ora from 'ora';
 import { PACKAGE_GROUPS, ALL_ITEMS } from './lib/packages.js';
+import { getScaffoldFiles } from './lib/scaffolds.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -45,13 +46,15 @@ export default function (plop) {
             },
             ...PACKAGE_GROUPS.flatMap((group) => {
                 if (group.type === 'list') {
-                    return [{
+                    const prompt = {
                         type: 'list',
                         name: group.id,
                         message: `${group.category}:`,
                         choices: group.choices,
                         default: group.default,
-                    }];
+                    };
+                    if (group.when) prompt.when = group.when;
+                    return [prompt];
                 }
                 return group.items.map(item => {
                     const prompt = {
@@ -135,6 +138,10 @@ export default function (plop) {
                             if (isNextjs && config.devInstallNextjs) {
                                 config.devInstall = [...(config.devInstall || []), ...config.devInstallNextjs];
                             }
+                            // Merge TanStack Query integrations when React Query is selected
+                            if (answers.reactQuery && config.installWithReactQuery) {
+                                config.install = [...(config.install || []), ...config.installWithReactQuery];
+                            }
                             config.id = `${group.id}_${choice}`;
                             selectedPackages.push(config);
                         }
@@ -148,8 +155,8 @@ export default function (plop) {
                         color: 'magenta',
                     }).start();
 
-                    const installCmds = selectedPackages.flatMap(pkg => pkg.install || []);
-                    const devInstallCmds = selectedPackages.flatMap(pkg => pkg.devInstall || []);
+                    const installCmds = [...new Set(selectedPackages.flatMap(pkg => pkg.install || []))];
+                    const devInstallCmds = [...new Set(selectedPackages.flatMap(pkg => pkg.devInstall || []))];
 
                     try {
                         // Standard Installs
@@ -199,44 +206,44 @@ export default function (plop) {
                         }
                     }
 
-                    // Configure Vitest (config, setup file, example test, npm scripts)
-                    const testingSelection = answers.testing || 'none';
-                    if (testingSelection === 'vitest' || testingSelection === 'both') {
-                        const vitestSpinner = ora({
-                            text: 'Configuring Vitest...',
+                    // Generate source files for selected options (Vitest config, API layer, ...)
+                    const displayName = answers.projectName === '.' ? path.basename(projectPath) : answers.projectName;
+                    const scaffold = getScaffoldFiles({ ...answers, projectName: displayName });
+                    if (scaffold.files.length > 0) {
+                        const scaffoldSpinner = ora({
+                            text: 'Generating starter files...',
                             color: 'yellow',
                         }).start();
 
                         try {
-                            const vitestData = {
-                                isPlaywright: testingSelection === 'both',
-                            };
-                            const srcDir = answers.framework === 'tanstack' ? 'src' : '';
-                            const vitestFiles = [
-                                ['vitest.config.ts.hbs', 'vitest.config.ts'],
-                                ['vitest.setup.ts.hbs', 'vitest.setup.ts'],
-                                ['example.test.tsx.hbs', path.join(srcDir, '__tests__', 'example.test.tsx')],
-                            ];
-                            for (const [tmplName, outFile] of vitestFiles) {
+                            const written = [];
+                            for (const [tmplName, outFile] of scaffold.files) {
                                 const outPath = path.join(projectPath, outFile);
                                 if (fs.existsSync(outPath)) continue;
-                                const tmpl = fs.readFileSync(path.join(__dirname, 'templates/vitest', tmplName), 'utf8');
+                                const tmpl = fs.readFileSync(path.join(__dirname, 'templates', tmplName), 'utf8');
                                 fs.mkdirSync(path.dirname(outPath), { recursive: true });
-                                fs.writeFileSync(outPath, plop.renderString(tmpl, vitestData));
+                                fs.writeFileSync(outPath, plop.renderString(tmpl, scaffold.data));
+                                written.push(outFile);
                             }
 
-                            const pkgJsonPath = path.join(projectPath, 'package.json');
-                            const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
-                            pkgJson.scripts = {
-                                ...pkgJson.scripts,
-                                test: 'vitest run',
-                                'test:watch': 'vitest',
-                            };
-                            fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + '\n');
+                            const testingSelection = answers.testing || 'none';
+                            if (testingSelection === 'vitest' || testingSelection === 'both') {
+                                const pkgJsonPath = path.join(projectPath, 'package.json');
+                                const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+                                pkgJson.scripts = {
+                                    ...pkgJson.scripts,
+                                    test: 'vitest run',
+                                    'test:watch': 'vitest',
+                                };
+                                fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + '\n');
+                            }
 
-                            vitestSpinner.succeed('Vitest configured (vitest.config.ts, vitest.setup.ts, npm test)');
+                            // TanStack Start's Vite plugin adds new API routes to routeTree.gen.ts on the first `npm run dev`/build.
+                            // (`tsr generate` is not used: it drops Start's `Register` typing from the generated tree.)
+
+                            scaffoldSpinner.succeed(`Starter files generated (${written.length} files)`);
                         } catch (error) {
-                            vitestSpinner.fail('Failed to configure Vitest');
+                            scaffoldSpinner.fail('Failed to generate starter files');
                             console.error(error);
                         }
                     }
@@ -252,12 +259,14 @@ export default function (plop) {
                         const testingChoice = answers.testing || 'none';
                         const isTanStack = answers.framework === 'tanstack';
                         const templateData = {
-                            projectName: answers.projectName === '.' ? path.basename(projectPath) : answers.projectName,
+                            projectName: displayName,
                             selectedPackages,
                             isSupabase: databaseChoice === 'supabase',
                             isConvex: databaseChoice === 'convex_cloud' || databaseChoice === 'convex_self',
                             isSQLite: databaseChoice === 'sqlite_turso' || databaseChoice === 'sqlite_self',
                             isTurso: databaseChoice === 'sqlite_turso',
+                            isORPC: answers.apiLayer === 'orpc',
+                            isTRPC: answers.apiLayer === 'trpc',
                             isDrizzle: ['supabase', 'sqlite_turso', 'sqlite_self'].includes(databaseChoice),
                             isNextjs: !isTanStack,
                             isTanStack,

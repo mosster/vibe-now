@@ -1,0 +1,15 @@
+import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
+import { createContext } from './init';
+import { appRouter } from './router';
+
+export const TRPC_ENDPOINT = '/api/trpc';
+
+export function handleTRPC(request: Request): Promise<Response> {
+  return fetchRequestHandler({
+    endpoint: TRPC_ENDPOINT,
+    req: request,
+    router: appRouter,
+    createContext,
+    onError: ({ path, error }) => console.error(`tRPC error on ${path ?? '<no-path>'}:`, error),
+  });
+}

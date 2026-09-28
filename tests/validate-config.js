@@ -4,6 +4,7 @@
  */
 
 import { PACKAGE_GROUPS, ALL_ITEMS } from '../lib/packages.js';
+import { getScaffoldFiles } from '../lib/scaffolds.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -321,6 +322,86 @@ assert(vitestSetup.includes('@testing-library/jest-dom/vitest'), 'vitest.setup.t
 const renderedClaudeVitest = Handlebars.compile(claudeTmpl)({ ...mockData, isVitest: true });
 assert(renderedClaudeVitest.includes('`npm test`'), 'CLAUDE.md lists npm test when Vitest is selected');
 assert(testGroup.providerConfig.both.commands?.length > 0, 'Both config has Playwright init commands');
+
+// ============================================
+// Test 9: API layer group & scaffolds
+// ============================================
+console.log('\n🔌 Test 9: API layer group & scaffolds\n');
+
+const apiGroup = PACKAGE_GROUPS.find(g => g.id === 'apiLayer');
+assert(apiGroup, 'API layer group exists');
+assert(apiGroup.type === 'list', 'API layer is a list-type group');
+assert(apiGroup.default === 'none', 'API layer defaults to none');
+assert(apiGroup.choices.map(c => c.value).join(',') === 'none,orpc,trpc', 'API layer has choices none, orpc, trpc');
+assert(PACKAGE_GROUPS.indexOf(apiGroup) > PACKAGE_GROUPS.indexOf(dbGroup), 'API layer is asked after Database (its prompt depends on it)');
+assert(apiGroup.when({ database: 'convex_cloud' }) === false, 'API layer is skipped for Convex Cloud');
+assert(apiGroup.when({ database: 'convex_self' }) === false, 'API layer is skipped for Convex Self-hosted');
+assert(apiGroup.when({ database: 'supabase' }) === true, 'API layer is asked for Supabase');
+assert(apiGroup.when({ database: 'none' }) === true, 'API layer is asked with no database');
+
+const orpcCfg = apiGroup.providerConfig.orpc;
+const trpcCfg = apiGroup.providerConfig.trpc;
+for (const pkg of ['@orpc/server', '@orpc/client', '@orpc/openapi', '@orpc/zod', 'zod']) {
+    assert(orpcCfg.install.includes(pkg), `oRPC installs ${pkg}`);
+}
+assert(orpcCfg.installWithReactQuery?.includes('@orpc/tanstack-query'), 'oRPC adds @orpc/tanstack-query with React Query');
+for (const pkg of ['@trpc/server', '@trpc/client', 'superjson', 'zod']) {
+    assert(trpcCfg.install.includes(pkg), `tRPC installs ${pkg}`);
+}
+assert(trpcCfg.installWithReactQuery?.includes('@trpc/tanstack-react-query'), 'tRPC adds @trpc/tanstack-react-query with React Query');
+
+const outputs = (answers) => getScaffoldFiles({ projectName: 'demo', ...answers }).files.map(([, out]) => out);
+const templatesExist = (answers) => getScaffoldFiles({ projectName: 'demo', ...answers }).files
+    .every(([tmpl]) => fs.existsSync(path.join(rootDir, 'templates', tmpl)));
+
+assert(outputs({ framework: 'nextjs', apiLayer: 'none', testing: 'none' }).length === 0, 'No scaffold files with no API layer and no Vitest');
+
+const orpcNext = outputs({ framework: 'nextjs', apiLayer: 'orpc', reactQuery: true });
+assert(orpcNext.includes('server/orpc/router.ts'), 'oRPC (Next.js) generates server/orpc/router.ts');
+assert(orpcNext.includes('app/api/rpc/[[...rest]]/route.ts'), 'oRPC (Next.js) generates RPC route handler');
+assert(orpcNext.includes('app/api/v1/[[...rest]]/route.ts'), 'oRPC (Next.js) generates OpenAPI route handler');
+assert(orpcNext.includes('lib/orpc.ts'), 'oRPC (Next.js) generates lib/orpc.ts');
+
+const orpcTan = outputs({ framework: 'tanstack', apiLayer: 'orpc' });
+assert(orpcTan.includes('src/server/orpc/handlers.ts'), 'oRPC (TanStack) generates src/server/orpc/handlers.ts');
+assert(orpcTan.includes('src/routes/api/rpc.$.ts') && orpcTan.includes('src/routes/api/v1.$.ts'), 'oRPC (TanStack) generates RPC + OpenAPI server routes');
+assert(!orpcTan.some(f => f.startsWith('app/')), 'oRPC (TanStack) generates no Next.js app/ files');
+
+const trpcNextRq = outputs({ framework: 'nextjs', apiLayer: 'trpc', reactQuery: true });
+assert(trpcNextRq.includes('app/api/trpc/[trpc]/route.ts'), 'tRPC (Next.js) generates route handler');
+assert(trpcNextRq.includes('lib/trpc/react.ts'), 'tRPC generates React Query hooks when React Query is selected');
+const trpcTanNoRq = outputs({ framework: 'tanstack', apiLayer: 'trpc', reactQuery: false });
+assert(trpcTanNoRq.includes('src/routes/api/trpc.$.ts'), 'tRPC (TanStack) generates server route');
+assert(!trpcTanNoRq.some(f => f.endsWith('react.ts')), 'tRPC skips React Query hooks without React Query');
+
+const vitestAndApi = outputs({ framework: 'nextjs', apiLayer: 'orpc', testing: 'both' });
+assert(vitestAndApi.includes('vitest.config.ts') && vitestAndApi.includes('lib/orpc.ts'), 'Vitest and API scaffolds combine');
+
+for (const answers of [
+    { framework: 'nextjs', apiLayer: 'orpc', testing: 'both', reactQuery: true },
+    { framework: 'tanstack', apiLayer: 'trpc', testing: 'vitest', reactQuery: true },
+]) {
+    assert(templatesExist(answers), `All scaffold templates exist (${answers.framework} + ${answers.apiLayer})`);
+}
+
+const renderScaffold = (tmpl, data) => Handlebars.compile(fs.readFileSync(path.join(rootDir, 'templates', tmpl), 'utf8'))(data);
+const orpcClientRq = renderScaffold('api/orpc/client.ts.hbs', { useReactQuery: true });
+const orpcClientPlain = renderScaffold('api/orpc/client.ts.hbs', { useReactQuery: false });
+assert(orpcClientRq.includes('createTanstackQueryUtils'), 'oRPC client exports TanStack Query utils with React Query');
+assert(!orpcClientPlain.includes('tanstack'), 'oRPC client has no TanStack Query import without React Query');
+const orpcHandlers = renderScaffold('api/orpc/handlers.ts.hbs', { projectName: 'demo' });
+assert(orpcHandlers.includes('OpenAPIReferencePlugin'), 'oRPC handlers serve OpenAPI spec & docs');
+assert(orpcHandlers.includes("title: 'demo API'"), 'oRPC OpenAPI spec is titled after the project');
+assert(renderScaffold('api/trpc/react.ts.hbs', { isNextjs: true }).startsWith("'use client';"), 'tRPC React hooks are a client module on Next.js');
+assert(!renderScaffold('api/trpc/react.ts.hbs', { isNextjs: false }).includes('use client'), 'tRPC React hooks have no use client directive on TanStack');
+
+const claudeOrpc = Handlebars.compile(claudeTmpl)({ ...mockData, isORPC: true });
+assert(claudeOrpc.includes('server/orpc/'), 'CLAUDE.md shows server/orpc/ for oRPC');
+assert(!claudeOrpc.includes('server/trpc/'), 'CLAUDE.md does NOT show server/trpc/ for oRPC');
+const agentsTmpl = fs.readFileSync(path.join(rootDir, 'templates/AGENTS.md.hbs'), 'utf8');
+const agentsTrpcTan = Handlebars.compile(agentsTmpl)({ ...tanstackConvexData, isConvex: false, isTRPC: true });
+assert(agentsTrpcTan.includes('server/trpc/'), 'AGENTS.md shows server/trpc/ for tRPC (TanStack)');
+assert(!Handlebars.compile(claudeTmpl)(mockData).includes('server/'), 'CLAUDE.md shows no server/ dir without an API layer');
 
 // ============================================
 // Summary

@@ -11,6 +11,8 @@ Four new features: framework choice (Next.js vs TanStack Start), AI editor conte
 - [x] **Feature 3: Database Provider** — Supabase+Drizzle vs Convex (Cloud/Self-hosted)
 - [x] **Feature 4: .env.example Generation** — Auto-generated from selected packages
 - [x] **Feature 5: Testing Frameworks** — Vitest + React Testing Library, Playwright, or both
+- [x] **Feature 6: SQLite Databases** — Turso or self-hosted libSQL, both with Drizzle
+- [x] **Feature 7: API Layer** — oRPC (with OpenAPI spec + docs) or tRPC
 
 ---
 
@@ -113,6 +115,30 @@ npx @tanstack/cli create my-app --add-ons shadcn # With add-ons
 - Vitest is now fully scaffolded: `vitest.config.ts` (jsdom, excludes `e2e/` when Playwright is also chosen), `vitest.setup.ts` (jest-dom matchers + cleanup), an example test in `[src/]__tests__/`, and `test` / `test:watch` npm scripts. Templates live in `templates/vitest/`
 - Playwright installs Chromium only by default (`--with-deps chromium`) to keep install fast
 - Async Server Components cannot be unit tested with Vitest — E2E only
+
+---
+
+## Feature 7: API Layer (oRPC vs tRPC) — DONE
+
+**Prompt**: List choice after Database: None (Server Actions / server functions), oRPC, tRPC. Skipped when Convex is selected (Convex has its own typed query/mutation layer).
+
+**Files changed**:
+- `lib/packages.js` — New `apiLayer` list group with a `when` condition; `installWithReactQuery` adds `@orpc/tanstack-query` / `@trpc/tanstack-react-query` only when React Query is selected
+- `lib/scaffolds.js` — Maps selections to starter files (API layer + Vitest), per framework
+- `plopfile.js` — List groups support `when`; installs are de-duplicated; one generic step renders scaffold templates (never overwrites existing files)
+- `templates/api/orpc/`, `templates/api/trpc/` — Router, handlers, typed client, route handlers (Next.js) / server routes (TanStack Start)
+- `templates/CLAUDE.md.hbs`, `templates/AGENTS.md.hbs` — `server/orpc/` or `server/trpc/` in the directory tree
+
+**Endpoints**:
+- oRPC: typed RPC at `/api/rpc`, REST at `/api/v1`, OpenAPI spec at `/api/v1/spec.json`, API docs (Scalar) at `/api/v1`
+- tRPC: `/api/trpc` (superjson transformer)
+
+**Key research findings**:
+- TanStack Start server routes: `createFileRoute(path)({ server: { handlers: { ANY | GET | POST } } })`
+- The `server` option type only exists once `routeTree.gen.ts` carries Start's `Register` augmentation. The Vite plugin writes it on `npm run dev`/build; `tsr generate` does NOT, so the wizard doesn't run it
+- tRPC v11's TanStack Query integration needs a `QueryClient`, so the scaffold uses `createTRPCContext` (provider + `useTRPC`); oRPC's `createTanstackQueryUtils(client)` needs no provider
+- Zod 4 schemas are converted for OpenAPI via `@orpc/zod/zod4`'s `ZodToJsonSchemaConverter`
+- Verified in real Next.js 16 and TanStack Start apps: typecheck, production build, REST/RPC/spec/docs/tRPC endpoints, and both typed clients against a running server
 
 ---
 
