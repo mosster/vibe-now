@@ -115,6 +115,12 @@ assert(convexCloudConfig?.envVars?.length === 1, `Convex Cloud has 1 env var`);
 const convexSelfConfig = PACKAGE_GROUPS.find(g => g.id === 'database')?.providerConfig?.convex_self;
 assert(convexSelfConfig?.envVars?.length === 2, `Convex Self-hosted has 2 env vars`);
 
+const tursoConfig = PACKAGE_GROUPS.find(g => g.id === 'database')?.providerConfig?.sqlite_turso;
+assert(tursoConfig?.envVars?.length === 2, `SQLite (Turso) has 2 env vars`);
+
+const sqliteSelfConfig = PACKAGE_GROUPS.find(g => g.id === 'database')?.providerConfig?.sqlite_self;
+assert(sqliteSelfConfig?.envVars?.length === 2, `SQLite (Self-hosted) has 2 env vars`);
+
 // ============================================
 // Test 4: ESLint framework-specific installs
 // ============================================
@@ -152,6 +158,9 @@ const mockData = {
     isTanStack: false,
     isSupabase: true,
     isConvex: false,
+    isSQLite: false,
+    isTurso: false,
+    isDrizzle: true,
 };
 
 for (const file of templateFiles) {
@@ -182,6 +191,7 @@ const tanstackConvexData = {
     isTanStack: true,
     isSupabase: false,
     isConvex: true,
+    isDrizzle: false,
     selectedPackages: [
         { name: 'Zustand', guidance: 'Use stores wisely.' },
         { name: 'Convex (Cloud)', guidance: 'Define schema in convex/.', envVars: [
@@ -203,6 +213,40 @@ const renderedEnv = Handlebars.compile(envTmpl)(tanstackConvexData);
 assert(renderedEnv.includes('CONVEX_URL'), '.env.example contains CONVEX_URL for Convex Cloud');
 assert(!renderedEnv.includes('SUPABASE'), '.env.example does NOT contain Supabase vars for Convex');
 
+// Test Next.js + SQLite (Turso) rendering
+const tursoData = {
+    ...mockData,
+    isSupabase: false,
+    isConvex: false,
+    isSQLite: true,
+    isTurso: true,
+    isDrizzle: true,
+    selectedPackages: [
+        { name: 'SQLite (Turso) + Drizzle', guidance: 'Use libSQL.', envVars: [
+            { key: 'TURSO_DATABASE_URL', comment: 'Turso database URL' },
+            { key: 'TURSO_AUTH_TOKEN', comment: 'Turso auth token' },
+        ]},
+    ],
+};
+for (const file of ['CLAUDE.md.hbs', 'AGENTS.md.hbs']) {
+    const tmpl = fs.readFileSync(path.join(rootDir, 'templates', file), 'utf8');
+    const rendered = Handlebars.compile(tmpl)(tursoData);
+    assert(rendered.includes('db/'), `${file} contains db/ for SQLite (Turso)`);
+    assert(rendered.includes('index.ts'), `${file} contains db/index.ts for SQLite`);
+    assert(!rendered.includes('convex/'), `${file} does NOT contain convex/ for SQLite`);
+    assert(rendered.includes('TURSO_AUTH_TOKEN'), `${file} warns about TURSO_AUTH_TOKEN`);
+    assert(!rendered.includes('service_role'), `${file} does NOT warn about Supabase service_role for SQLite`);
+}
+const renderedTursoEnv = Handlebars.compile(envTmpl)(tursoData);
+assert(renderedTursoEnv.includes('TURSO_DATABASE_URL'), '.env.example contains TURSO_DATABASE_URL for Turso');
+assert(!renderedTursoEnv.includes('SUPABASE'), '.env.example does NOT contain Supabase vars for Turso');
+
+// Test TanStack + SQLite (Self-hosted) rendering
+const sqliteSelfData = { ...tursoData, isNextjs: false, isTanStack: true, isTurso: false };
+const renderedSqliteSelf = Handlebars.compile(claudeTmpl)(sqliteSelfData);
+assert(renderedSqliteSelf.includes('db/'), 'CLAUDE.md contains db/ for SQLite (Self-hosted)');
+assert(!renderedSqliteSelf.includes('TURSO_AUTH_TOKEN'), 'CLAUDE.md does NOT mention TURSO_AUTH_TOKEN for self-hosted SQLite');
+
 // ============================================
 // Test 6: Database group structure
 // ============================================
@@ -211,12 +255,20 @@ console.log('\n🗄️ Test 6: Database group structure\n');
 const dbGroup = PACKAGE_GROUPS.find(g => g.id === 'database');
 assert(dbGroup, 'Database group exists');
 assert(dbGroup.type === 'list', 'Database is a list-type group');
-assert(dbGroup.choices.length === 4, 'Database has 4 choices (none, supabase, convex_cloud, convex_self)');
+assert(dbGroup.choices.length === 6, 'Database has 6 choices (none, supabase, convex_cloud, convex_self, sqlite_turso, sqlite_self)');
 assert(dbGroup.providerConfig.supabase, 'Supabase provider config exists');
 assert(dbGroup.providerConfig.convex_cloud, 'Convex Cloud provider config exists');
 assert(dbGroup.providerConfig.convex_self, 'Convex Self-hosted provider config exists');
 assert(dbGroup.providerConfig.supabase.devInstall?.includes('drizzle-kit'), 'Supabase includes drizzle-kit as devDep');
 assert(!dbGroup.providerConfig.convex_cloud.devInstall, 'Convex Cloud has no devDeps');
+for (const key of ['sqlite_turso', 'sqlite_self']) {
+    const cfg = dbGroup.providerConfig[key];
+    assert(cfg, `${key} provider config exists`);
+    assert(cfg.install.includes('@libsql/client'), `${key} includes @libsql/client`);
+    assert(cfg.install.includes('drizzle-orm'), `${key} includes drizzle-orm`);
+    assert(!cfg.install.includes('pg'), `${key} does NOT include pg`);
+    assert(cfg.devInstall?.includes('drizzle-kit'), `${key} includes drizzle-kit as devDep`);
+}
 
 // ============================================
 // Test 7: Testing group structure

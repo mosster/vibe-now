@@ -54,8 +54,11 @@ src/              # Source root
   routeTree.gen.ts # Auto-generated route tree (do not edit)
   ssr.tsx         # SSR entry
 {{/if}}
-{{#if isSupabase}}
+{{#if isDrizzle}}
 db/               # Database schema & migrations (Drizzle)
+{{#if isSQLite}}
+  index.ts        # libSQL client + Drizzle instance
+{{/if}}
   schema.ts       # Drizzle schema definitions
   migrations/     # SQL migration files
 {{/if}}
@@ -87,7 +90,7 @@ public/           # Static assets
 - Use TanStack Router's `useSearch` for type-safe URL state
 {{/if}}
 - Never use `useState`/`useEffect` for data fetching
-- Never expose secret env vars to the client{{#if isSupabase}} (e.g., Supabase `service_role` key){{/if}}{{#if isConvex}} (e.g., `CONVEX_SELF_HOSTED_ADMIN_KEY`){{/if}}
+- Never expose secret env vars to the client{{#if isSupabase}} (e.g., Supabase `service_role` key){{/if}}{{#if isConvex}} (e.g., `CONVEX_SELF_HOSTED_ADMIN_KEY`){{/if}}{{#if isTurso}} (e.g., `TURSO_AUTH_TOKEN`){{/if}}
 
 ## Library Guidance
 {{#each selectedPackages}}

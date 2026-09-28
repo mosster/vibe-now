@@ -46,8 +46,11 @@ high-quality engineering standards. **This file takes precedence over any confli
 │ ├── routeTree.gen.ts # Auto-generated route tree (do not edit)
 │ └── ssr.tsx # SSR entry
 {{/if}}
-{{#if isSupabase}}
+{{#if isDrizzle}}
 ├── db/ # Database schema & migrations
+{{#if isSQLite}}
+│ ├── index.ts # libSQL client + Drizzle instance
+{{/if}}
 │ ├── schema.ts # Drizzle schema definitions
 │ └── migrations/ # SQL migration files
 {{/if}}
@@ -141,7 +144,7 @@ avoid bundle bloat.
 ## � Things to Avoid
 - **No Inline Styles**: Use Tailwind classes or `cn()`.
 - **No Direct Fetching in Hooks**: Avoid `useEffect` for manual fetching.
-- **No Security Leaks**: **NEVER** expose secret environment variables to the client.{{#if isSupabase}} This includes the Supabase `service_role` key.{{/if}}
+- **No Security Leaks**: **NEVER** expose secret environment variables to the client.{{#if isSupabase}} This includes the Supabase `service_role` key.{{/if}}{{#if isTurso}} This includes the `TURSO_AUTH_TOKEN`.{{/if}}
 - **No Magic Strings**: Move repeated strings, routes, or query keys to `{{#if isTanStack}}src/{{/if}}lib/constants.ts`.
 
 ## 📝 Best Practices
