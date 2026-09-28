@@ -109,7 +109,8 @@ npx @tanstack/cli create my-app --add-ons shadcn # With add-ons
 
 ### Key technical notes
 - Vitest on Next.js needs `@vitejs/plugin-react` and `vite-tsconfig-paths` (not Vite-native)
-- Vitest on TanStack Start does NOT need those extras (already Vite-based)
+- Vitest on TanStack Start: those extras are now installed for both frameworks, because the generated standalone `vitest.config.ts` imports them (it doesn't reuse TanStack's `vite.config.ts` plugins)
+- Vitest is now fully scaffolded: `vitest.config.ts` (jsdom, excludes `e2e/` when Playwright is also chosen), `vitest.setup.ts` (jest-dom matchers + cleanup), an example test in `[src/]__tests__/`, and `test` / `test:watch` npm scripts. Templates live in `templates/vitest/`
 - Playwright installs Chromium only by default (`--with-deps chromium`) to keep install fast
 - Async Server Components cannot be unit tested with Vitest — E2E only
 

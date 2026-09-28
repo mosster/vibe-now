@@ -284,12 +284,42 @@ assert(testGroup.providerConfig.playwright, 'Playwright provider config exists')
 assert(testGroup.providerConfig.both, 'Both provider config exists');
 assert(testGroup.providerConfig.vitest.devInstall?.includes('vitest'), 'Vitest config includes vitest');
 assert(testGroup.providerConfig.vitest.devInstall?.includes('@testing-library/react'), 'Vitest config includes @testing-library/react');
-assert(testGroup.providerConfig.vitest.devInstallNextjs?.includes('@vitejs/plugin-react'), 'Vitest has Next.js-specific @vitejs/plugin-react');
+assert(testGroup.providerConfig.vitest.devInstall?.includes('@vitejs/plugin-react'), 'Vitest config includes @vitejs/plugin-react (all frameworks)');
+assert(testGroup.providerConfig.vitest.devInstall?.includes('vite-tsconfig-paths'), 'Vitest config includes vite-tsconfig-paths (all frameworks)');
 assert(testGroup.providerConfig.playwright.devInstall?.includes('@playwright/test'), 'Playwright config includes @playwright/test');
 assert(testGroup.providerConfig.playwright.commands?.length > 0, 'Playwright has init commands');
 assert(testGroup.providerConfig.both.devInstall?.includes('vitest'), 'Both config includes vitest');
 assert(testGroup.providerConfig.both.devInstall?.includes('@playwright/test'), 'Both config includes @playwright/test');
-assert(testGroup.providerConfig.both.devInstallNextjs?.includes('@vitejs/plugin-react'), 'Both has Next.js-specific @vitejs/plugin-react');
+assert(testGroup.providerConfig.both.devInstall?.includes('@vitejs/plugin-react'), 'Both config includes @vitejs/plugin-react (all frameworks)');
+assert(testGroup.providerConfig.both.devInstall?.includes('vite-tsconfig-paths'), 'Both config includes vite-tsconfig-paths (all frameworks)');
+
+// ============================================
+// Test 8: Vitest scaffold templates
+// ============================================
+console.log('\n🧫 Test 8: Vitest scaffold templates\n');
+
+const vitestTmplDir = path.join(rootDir, 'templates/vitest');
+for (const file of ['vitest.config.ts.hbs', 'vitest.setup.ts.hbs', 'example.test.tsx.hbs']) {
+    assert(fs.existsSync(path.join(vitestTmplDir, file)), `Vitest template exists: ${file}`);
+}
+
+const vitestConfigTmpl = fs.readFileSync(path.join(vitestTmplDir, 'vitest.config.ts.hbs'), 'utf8');
+const vitestOnlyConfig = Handlebars.compile(vitestConfigTmpl)({ isPlaywright: false });
+assert(vitestOnlyConfig.includes("environment: 'jsdom'"), 'vitest.config.ts uses jsdom environment');
+assert(vitestOnlyConfig.includes("setupFiles: ['./vitest.setup.ts']"), 'vitest.config.ts registers setup file');
+assert(vitestOnlyConfig.includes('tsconfigPaths()') && vitestOnlyConfig.includes('react()'), 'vitest.config.ts loads tsconfigPaths + react plugins');
+assert(!vitestOnlyConfig.includes('e2e/**'), 'vitest.config.ts does NOT exclude e2e/ without Playwright');
+assert(!vitestOnlyConfig.includes('configDefaults'), 'vitest.config.ts does NOT import configDefaults without Playwright');
+
+const vitestBothConfig = Handlebars.compile(vitestConfigTmpl)({ isPlaywright: true });
+assert(vitestBothConfig.includes("'e2e/**'"), 'vitest.config.ts excludes e2e/ when Playwright is selected');
+assert(vitestBothConfig.includes('configDefaults'), 'vitest.config.ts imports configDefaults when Playwright is selected');
+
+const vitestSetup = fs.readFileSync(path.join(vitestTmplDir, 'vitest.setup.ts.hbs'), 'utf8');
+assert(vitestSetup.includes('@testing-library/jest-dom/vitest'), 'vitest.setup.ts loads jest-dom matchers');
+
+const renderedClaudeVitest = Handlebars.compile(claudeTmpl)({ ...mockData, isVitest: true });
+assert(renderedClaudeVitest.includes('`npm test`'), 'CLAUDE.md lists npm test when Vitest is selected');
 assert(testGroup.providerConfig.both.commands?.length > 0, 'Both config has Playwright init commands');
 
 // ============================================

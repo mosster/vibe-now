@@ -90,3 +90,4 @@ Run `node tests/validate-config.js` — 157 unit tests covering:
 - ESLint framework-specific installs (`eslint-config-next` only for Next.js)
 - Template rendering for Next.js + Supabase, TanStack + Convex, Next.js + SQLite (Turso), and TanStack + SQLite (Self-hosted) combinations
 - Database group structure and provider configs
+- Testing group structure and Vitest scaffold templates (config, setup file, e2e exclusion with Playwright)

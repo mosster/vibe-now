@@ -199,6 +199,48 @@ export default function (plop) {
                         }
                     }
 
+                    // Configure Vitest (config, setup file, example test, npm scripts)
+                    const testingSelection = answers.testing || 'none';
+                    if (testingSelection === 'vitest' || testingSelection === 'both') {
+                        const vitestSpinner = ora({
+                            text: 'Configuring Vitest...',
+                            color: 'yellow',
+                        }).start();
+
+                        try {
+                            const vitestData = {
+                                isPlaywright: testingSelection === 'both',
+                            };
+                            const srcDir = answers.framework === 'tanstack' ? 'src' : '';
+                            const vitestFiles = [
+                                ['vitest.config.ts.hbs', 'vitest.config.ts'],
+                                ['vitest.setup.ts.hbs', 'vitest.setup.ts'],
+                                ['example.test.tsx.hbs', path.join(srcDir, '__tests__', 'example.test.tsx')],
+                            ];
+                            for (const [tmplName, outFile] of vitestFiles) {
+                                const outPath = path.join(projectPath, outFile);
+                                if (fs.existsSync(outPath)) continue;
+                                const tmpl = fs.readFileSync(path.join(__dirname, 'templates/vitest', tmplName), 'utf8');
+                                fs.mkdirSync(path.dirname(outPath), { recursive: true });
+                                fs.writeFileSync(outPath, plop.renderString(tmpl, vitestData));
+                            }
+
+                            const pkgJsonPath = path.join(projectPath, 'package.json');
+                            const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+                            pkgJson.scripts = {
+                                ...pkgJson.scripts,
+                                test: 'vitest run',
+                                'test:watch': 'vitest',
+                            };
+                            fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + '\n');
+
+                            vitestSpinner.succeed('Vitest configured (vitest.config.ts, vitest.setup.ts, npm test)');
+                        } catch (error) {
+                            vitestSpinner.fail('Failed to configure Vitest');
+                            console.error(error);
+                        }
+                    }
+
                     // 3. Generate README and AGENTS files
                     const docSpinner = ora({
                         text: 'Generating custom documentation and agent rules...',
