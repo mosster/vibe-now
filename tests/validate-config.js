@@ -404,6 +404,19 @@ assert(agentsTrpcTan.includes('server/trpc/'), 'AGENTS.md shows server/trpc/ for
 assert(!Handlebars.compile(claudeTmpl)(mockData).includes('server/'), 'CLAUDE.md shows no server/ dir without an API layer');
 
 // ============================================
+// Test 10: Motion (motion.dev)
+// ============================================
+console.log('\n🎞️ Test 10: Motion (motion.dev)\n');
+
+const motionItem = ALL_ITEMS.find(i => i.id === 'motion');
+assert(motionItem, 'Motion item exists');
+assert(motionItem.install.includes('motion') && !motionItem.install.includes('framer-motion'), 'Motion installs `motion`, not legacy `framer-motion`');
+assert(motionItem.default === false, 'Motion is opt-in (default off)');
+assert(!motionItem.frameworks, 'Motion is available for both frameworks');
+assert(PACKAGE_GROUPS.find(g => g.items?.includes(motionItem))?.category === 'UI & Components', 'Motion is in UI & Components');
+assert(motionItem.guidance.includes('motion/react-client'), 'Motion guidance covers Server Component import');
+
+// ============================================
 // Summary
 // ============================================
 console.log(`\n${'='.repeat(40)}`);
