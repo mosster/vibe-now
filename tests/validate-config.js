@@ -881,9 +881,11 @@ assert(!outputs({ framework: 'nextjs', apiLayer: 'orpc' }).some(f => f.includes(
 const mcpFiles = getScaffoldFiles({ projectName: 'demo', framework: 'nextjs', apiLayer: 'orpc', mcp: true }, docCommands('npm')).files.filter(([t]) => t.startsWith('mcp/'));
 assert(mcpFiles.every(([t]) => fs.existsSync(path.join(rootDir, 'templates', t))), 'Every MCP template exists');
 const mcpHandler = renderHbs(readTemplate('mcp/handler.ts.hbs'), { projectName: 'demo-app' });
-assert(mcpHandler.includes("new McpServer({ name: 'demo-app'") && mcpHandler.includes('MCP_API_KEY') && mcpHandler.includes('localhostAllowedHostnames'), 'MCP handler names the server, guards with MCP_API_KEY, localhost-only without it');
+assert(mcpHandler.includes("new McpServer({ name: 'demo-app'") && mcpHandler.includes('MCP_API_KEY') && mcpHandler.includes('localhostAllowedHostnames'), 'MCP handler names the server, guards with MCP_API_KEY, localhost Host/Origin checks in development');
 assert(readTemplate('mcp/tools.orpc.ts.hbs').includes("from '@/server/orpc/router'") && readTemplate('mcp/orpc-tools.ts.hbs').includes('createRouterClient'), 'Router tools call the oRPC router through createRouterClient');
 assert(!/:\s*any\b|as any\b|biome-ignore/.test(readTemplate('mcp/orpc-tools.ts.hbs')), 'MCP adapter has no explicit any (eslint-config-next rejects it) and no lint suppressions');
+assert(/process\.env\.NODE_ENV === 'production'\) return unauthorized\(\)/.test(mcpHandler), 'MCP handler without a key refuses every request in production (Next.js)');
+assert(renderHbs(readTemplate('mcp/handler.ts.hbs'), { projectName: 'demo-app', isTanStack: true }).includes('if (import.meta.env.PROD) return unauthorized()'), 'MCP handler without a key refuses every request in production (TanStack)');
 for (const t of ['mcp/handler.ts.hbs', 'mcp/tools.orpc.ts.hbs', 'mcp/orpc-tools.ts.hbs', 'mcp/tools.standalone.ts.hbs', 'mcp/route.nextjs.ts.hbs', 'mcp/route.tanstack.ts.hbs']) {
     assert(!/@modelcontextprotocol\/sdk/.test(readTemplate(t)), `${t} has no v1 SDK imports`);
 }
@@ -1014,8 +1016,11 @@ assert(!jobChoices({ database: 'none' }).find(c => c.value === 'inngest').disabl
 const pgbCfg = jobsGroup.providerConfig.pgboss, innCfg = jobsGroup.providerConfig.inngest, trgCfg = jobsGroup.providerConfig.trigger;
 assert(pgbCfg.install.includes('pg-boss') && pgbCfg.install.includes('@opentelemetry/api') && pgbCfg.devInstall.includes('tsx'), 'pg-boss installs its required OpenTelemetry peer and tsx for the worker');
 assert(!pgbCfg.envVars, 'pg-boss adds no env var (it reuses the database option\'s DATABASE_URL)');
-assert(innCfg.install.join(',') === 'inngest' && innCfg.envVars.map(e => e.key).join(',') === 'INNGEST_DEV,INNGEST_EVENT_KEY,INNGEST_SIGNING_KEY', 'Inngest package and env vars');
-assert(trgCfg.install.join(',') === '@trigger.dev/sdk' && trgCfg.devInstall.join(',') === 'trigger.dev,@trigger.dev/build' && trgCfg.envVars.map(e => e.key).join(',') === 'TRIGGER_SECRET_KEY,TRIGGER_PROJECT_REF', 'Trigger.dev SDK, CLI + build, env vars');
+assert(innCfg.install.join(',') === 'inngest,zod' && innCfg.envVars.map(e => e.key).join(',') === 'INNGEST_DEV,INNGEST_EVENT_KEY,INNGEST_SIGNING_KEY', 'Inngest package and env vars');
+assert(trgCfg.install.join(',') === '@trigger.dev/sdk,zod' && trgCfg.devInstall.join(',') === 'trigger.dev,@trigger.dev/build' && trgCfg.envVars.map(e => e.key).join(',') === 'TRIGGER_SECRET_KEY,TRIGGER_PROJECT_REF', 'Trigger.dev SDK, CLI + build, env vars');
+for (const cfg of [pgbCfg, innCfg, trgCfg]) {
+    assert(cfg.install.includes('zod'), `${cfg.name} installs zod (its starter files import it, even when Zod is unticked)`);
+}
 for (const [cfg, path_] of [[pgbCfg, 'src/server/jobs/index.ts'], [innCfg, 'src/inngest/functions.ts'], [trgCfg, 'src/trigger/']]) {
     assert(resolveConfig(cfg, { framework: 'tanstack' }).guidance.includes(path_), `${cfg.name} guidance names ${path_} on TanStack`);
 }
@@ -1044,6 +1049,17 @@ assert(Object.keys(getScaffoldScripts({ jobs: 'none' }, { dlx: 'npx' })).length 
 assert(addGitignoreEntry('node_modules\n', '.trigger', 'Trigger.dev').endsWith('# Trigger.dev\n.trigger\n') && addGitignoreEntry('node_modules\n.trigger\n', '.trigger', 'x') === null, 'addGitignoreEntry appends once');
 const jobsDoc = renderHbs(claudeTmpl, { ...mockData, isPgBoss: true });
 assert(jobsDoc.includes('server/jobs/      # Background jobs (pg-boss)'), 'CLAUDE.md tree lists server/jobs/ with pg-boss');
+
+
+console.log('\n🔎 Test 19: Review fixes\n');
+assert(readTemplate('env.example.hbs').includes('# {{{this.comment}}}'), '.env.example comments are not HTML-escaped');
+assert(renderHbs(readTemplate('env.example.hbs'), { selectedPackages: [{ name: 'X', envVars: [{ key: 'K', comment: 'e.g. libsql://<db>.turso.io, `x`' }] }] }).includes('# e.g. libsql://<db>.turso.io, `x`'), '.env.example keeps < > and backticks in comments');
+for (const [t, data] of [['uploads/r2/route.nextjs.ts.hbs', {}], ['uploads/r2/route.tanstack.ts.hbs', {}], ['uploads/uploadthing/core.ts.hbs', {}], ['uploads/uploadthing/core.ts.hbs', { isTanStack: true }]]) {
+    const out = renderHbs(readTemplate(t), data);
+    assert(/return (process\.env\.NODE_ENV === 'production'|import\.meta\.env\.PROD) \? null : \{ id: 'anonymous' \}/.test(out), `${t}${data.isTanStack ? ' (TanStack)' : ''}: the auth stub refuses uploads in production`);
+}
+const plopSrc = fs.readFileSync(path.join(rootDir, 'plopfile.js'), 'utf8');
+assert(!/selectedPackages\.length === 0\) return/.test(plopSrc) && plopSrc.includes('if (selectedPackages.length > 0) {'), 'Selecting no packages skips only the install, not docs, workflow and scripts');
 
 // ============================================
 // Summary

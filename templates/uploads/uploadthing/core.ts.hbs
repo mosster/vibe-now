@@ -8,8 +8,9 @@ import { createUploadthing, type FileRouter, UploadThingError } from 'uploadthin
 const f = createUploadthing();
 
 // Replace with your auth lookup (session cookie, Better Auth, etc.). Return null to reject the upload.
+// Until then uploads are allowed in development only, so a deployed app never accepts anonymous uploads.
 async function getUser(_req: Request): Promise<{ id: string } | null> {
-  return { id: 'anonymous' };
+  return {{#if isTanStack}}import.meta.env.PROD{{else}}process.env.NODE_ENV === 'production'{{/if}} ? null : { id: 'anonymous' };
 }
 
 /**

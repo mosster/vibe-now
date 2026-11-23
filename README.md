@@ -39,7 +39,7 @@ A premium, interactive CLI wizard for scaffolding modern full-stack React applic
 - **UI & Components**: shadcn/ui, next-themes (Next.js) / tanstack-theme-kit (TanStack), Motion (motion.dev, formerly Framer Motion)
 - **Database (choose one)**: Supabase + Drizzle ORM, plain Postgres + Drizzle ORM (any host, no Supabase), Convex (Cloud), Convex (Self-hosted), SQLite via Turso + Drizzle, or self-hosted SQLite/libSQL + Drizzle
 - **API Layer (choose one)**: oRPC (typed RPC + REST with an OpenAPI spec & docs) or tRPC, with a working example router (skipped for Convex)
-- **Agent Surface**: an MCP server at `/api/mcp` (stateless Streamable HTTP, MCP SDK v2). With oRPC, every procedure is an MCP tool automatically; otherwise a hand-written tool registry. Localhost-only until `MCP_API_KEY` is set
+- **Agent Surface**: an MCP server at `/api/mcp` (stateless Streamable HTTP, MCP SDK v2). With oRPC, every procedure is an MCP tool automatically; otherwise a hand-written tool registry. Without `MCP_API_KEY` it is open in development and refuses every request in production
 - **Background Jobs (choose one)**: pg-boss (queue in your Postgres + a worker process; needs Postgres or Supabase), Inngest (durable functions over HTTP), or Trigger.dev (hosted task runners), each with a typed example job and its dev scripts
 - **File Uploads (choose one)**: UploadThing (hosted storage + upload UI; not offered with Effect v4, since it bundles Effect 3) or Cloudflare R2 (S3 API, short-lived presigned uploads with type and size enforced)
 - **Analytics & Monitoring**: PostHog (product analytics; `/ingest` reverse proxy on Next.js) and Sentry (error tracking), together or apart; both stay silent until their keys are set

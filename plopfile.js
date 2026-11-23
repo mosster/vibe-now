@@ -175,34 +175,36 @@ export default function (plop) {
                     // Every selected package, with framework- and React Query-specific installs merged in
                     const selectedPackages = selectPackages(answers);
 
-                    if (selectedPackages.length === 0) return 'No additional packages selected';
+                    // With nothing selected only the install is skipped: the workflow docs, gate scripts,
+                    // README and CLAUDE.md / AGENTS.md below are still generated
+                    if (selectedPackages.length > 0) {
+                        const pkgNames = selectedPackages.map(p => p.name).join(', ');
+                        const installSpinner = ora({
+                            text: `Installing: ${pkgNames}...`,
+                            color: 'magenta',
+                        }).start();
 
-                    const pkgNames = selectedPackages.map(p => p.name).join(', ');
-                    const installSpinner = ora({
-                        text: `Installing: ${pkgNames}...`,
-                        color: 'magenta',
-                    }).start();
+                        const installCmds = [...new Set(selectedPackages.flatMap(pkg => pkg.install || []))];
+                        const devInstallCmds = [...new Set(selectedPackages.flatMap(pkg => pkg.devInstall || []))];
 
-                    const installCmds = [...new Set(selectedPackages.flatMap(pkg => pkg.install || []))];
-                    const devInstallCmds = [...new Set(selectedPackages.flatMap(pkg => pkg.devInstall || []))];
+                        try {
+                            // Standard Installs
+                            if (installCmds.length > 0) {
+                                const [command, ...args] = resolveAdd(pm, installCmds);
+                                await execa(command, args, { cwd: projectPath, env: pmEnv });
+                            }
 
-                    try {
-                        // Standard Installs
-                        if (installCmds.length > 0) {
-                            const [command, ...args] = resolveAdd(pm, installCmds);
-                            await execa(command, args, { cwd: projectPath, env: pmEnv });
+                            // Dev Installs
+                            if (devInstallCmds.length > 0) {
+                                installSpinner.text = 'Installing devDependencies...';
+                                const [command, ...args] = resolveAdd(pm, devInstallCmds, { dev: true });
+                                await execa(command, args, { cwd: projectPath, env: pmEnv });
+                            }
+                            installSpinner.succeed('Packages installed successfully!');
+                        } catch (error) {
+                            installSpinner.fail('Package installation failed');
+                            throw error;
                         }
-
-                        // Dev Installs
-                        if (devInstallCmds.length > 0) {
-                            installSpinner.text = 'Installing devDependencies...';
-                            const [command, ...args] = resolveAdd(pm, devInstallCmds, { dev: true });
-                            await execa(command, args, { cwd: projectPath, env: pmEnv });
-                        }
-                        installSpinner.succeed('Packages installed successfully!');
-                    } catch (error) {
-                        installSpinner.fail('Package installation failed');
-                        throw error;
                     }
 
                     // shadcn reads the project's alias from tsconfig; with the TanStack CLI's `#/*` listed

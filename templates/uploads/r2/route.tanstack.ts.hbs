@@ -2,8 +2,9 @@ import { createFileRoute } from '@tanstack/react-router';
 import { createUploadUrl, getFileUrl, StorageConfigError, UploadRejectedError } from '@/server/storage';
 
 // Replace with your auth lookup (session cookie, Better Auth, etc.). Return null to reject the upload.
+// Until then uploads are allowed in development only, so a deployed app never accepts anonymous uploads.
 async function getUser(_request: Request): Promise<{ id: string } | null> {
-  return { id: 'anonymous' };
+  return import.meta.env.PROD ? null : { id: 'anonymous' };
 }
 
 /** POST { contentType, size } -> { key, uploadUrl, method, headers, fileUrl } for a direct browser upload to R2 */

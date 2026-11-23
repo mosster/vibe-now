@@ -27,14 +27,22 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+const unauthorized = () =>
+  Response.json(
+    { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized' } },
+    { status: 401, headers: { 'WWW-Authenticate': 'Bearer realm="mcp"' } },
+  );
+
 /**
  * With MCP_API_KEY set, every request needs `Authorization: Bearer <MCP_API_KEY>`.
- * Without it the endpoint is open, but only to localhost (blocks DNS rebinding and
- * accidental exposure of an unauthenticated endpoint on a public host).
+ * Without it the endpoint is closed in production. In development it is open, with the
+ * Host and Origin checked against localhost: that blocks DNS rebinding from a web page,
+ * but the headers are the client's to set, so it is not access control.
  */
 function authorize(request: Request): Response | undefined {
   const apiKey = process.env.MCP_API_KEY;
   if (!apiKey) {
+    if ({{#if isTanStack}}import.meta.env.PROD{{else}}process.env.NODE_ENV === 'production'{{/if}}) return unauthorized();
     return (
       hostHeaderValidationResponse(request, localhostAllowedHostnames()) ??
       originValidationResponse(request, localhostAllowedOrigins())
@@ -42,10 +50,7 @@ function authorize(request: Request): Response | undefined {
   }
   const match = /^Bearer\s+(.+)$/i.exec(request.headers.get('authorization') ?? '');
   if (match && safeEqual(match[1].trim(), apiKey)) return undefined;
-  return Response.json(
-    { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized' } },
-    { status: 401, headers: { 'WWW-Authenticate': 'Bearer realm="mcp"' } },
-  );
+  return unauthorized();
 }
 
 export async function handleMCP(request: Request): Promise<Response> {
