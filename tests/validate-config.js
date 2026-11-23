@@ -508,7 +508,7 @@ assert(detectPackageManager('pnpm/11.17.0 npm/? node/v22.23.1 darwin arm64') ===
 assert(detectPackageManager('yarn/1.22.22 npm/? node/v22.23.1 darwin arm64') === 'yarn', 'Detects yarn from user agent');
 assert(detectPackageManager('bun/1.2.4 npm/? node/v24.3.0 darwin arm64') === 'bun', 'Detects bun from user agent');
 assert(detectPackageManager('npm/10.9.8 node/v22.23.1 darwin arm64 workspaces/false') === 'npm', 'Detects npm from user agent');
-assert(detectPackageManager(undefined) === null, 'No user agent → null');
+assert(detectPackageManager('') === null, 'Empty user agent → null (undefined falls back to npm_config_user_agent, which npm test sets)');
 assert(detectPackageManager('deno/2.0.0') === null, 'Unsupported package manager → null');
 
 // Prompt choices & default
