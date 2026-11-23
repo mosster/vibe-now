@@ -1,0 +1,9 @@
+// TanStack Start instance: global middleware for every request and server function.
+// Sentry's middleware goes first so it sees errors thrown by everything after it.
+import { sentryGlobalFunctionMiddleware, sentryGlobalRequestMiddleware } from '@sentry/tanstackstart-react';
+import { createStart } from '@tanstack/react-start';
+
+export const startInstance = createStart(() => ({
+  requestMiddleware: [sentryGlobalRequestMiddleware],
+  functionMiddleware: [sentryGlobalFunctionMiddleware],
+}));

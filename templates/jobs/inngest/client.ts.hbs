@@ -1,0 +1,11 @@
+import { eventType, Inngest } from 'inngest';
+import { z } from 'zod';
+
+// Local dev: set INNGEST_DEV=1 and run `{{{pm.run}}} inngest:dev` (the Inngest Dev Server) next to the app.
+// Production: INNGEST_EVENT_KEY + INNGEST_SIGNING_KEY are read from the environment.
+export const inngest = new Inngest({ id: '{{projectName}}' });
+
+// Typed events: use them as function triggers and to send events.
+export const userSignedUp = eventType('app/user.signed-up', {
+  schema: z.object({ userId: z.string(), email: z.email() }),
+});

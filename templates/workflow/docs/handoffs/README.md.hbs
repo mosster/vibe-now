@@ -1,0 +1,27 @@
+# Handoffs
+
+End-of-session state, so the next session (a fresh context, possibly a different model) can resume without the conversation. Each one is a map plus warning labels, derived from the repo (git log, specs, spikes, checklists, reviews), not from memory.{{#if hasSkills}} The `handoff` skill in `.claude/skills/` writes them.{{/if}}
+
+**Read the latest before resuming,** together with `docs/phases/SPEC_MASTER_CHECKLIST.md` and the current spec or spike.
+
+## Naming
+
+`HANDOFF_PHASE_<PHASE>_<SLUG>.md`, for example `HANDOFF_PHASE_0A_REPO_FOUNDATIONS.md`.
+
+- **PHASE** comes from the branch (`phase-0a-…` → `0A`). Use `PRE0` before Phase 0 starts, for example during a spike.
+- **SLUG** is a few words in capitals for what the session was about.
+
+## What a handoff holds
+
+- **Where we are:** branch, last commit, the sub-phase or spike, and how much of its exit checklist is done.
+- **Done this session,** with commit shas.
+- **In flight or half-done:** files, what's left, and what state they're in.
+- **Decisions and open questions:** ADRs written or accepted, and questions waiting on the founder.
+- **Traps and warnings:** things that look done but aren't, flaky tests, environment quirks, services that must be running, paid calls still pending.
+- **Next steps:** the next one to three concrete actions.
+- **Read first:** the spec or spike, ADRs, reviews and key files.
+
+## Index (newest first)
+
+| Date | Handoff | Phase |
+|---|---|---|

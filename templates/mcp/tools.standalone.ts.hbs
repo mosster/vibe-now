@@ -1,0 +1,21 @@
+import type { McpServer } from '@modelcontextprotocol/server';
+import * as z from 'zod';
+
+// Hand-written MCP tools (no API layer). One registerTool call per tool; the Zod schemas
+// are advertised to clients as JSON Schema and validate arguments before the handler runs.
+export async function registerTools(server: McpServer): Promise<void> {
+  server.registerTool(
+    'hello',
+    {
+      title: 'Say hello',
+      description: 'Say hello',
+      inputSchema: z.object({ name: z.string().min(1).default('world') }),
+      outputSchema: z.object({ message: z.string() }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ name }) => {
+      const output = { message: `Hello, ${name}!` };
+      return { content: [{ type: 'text', text: JSON.stringify(output) }], structuredContent: output };
+    },
+  );
+}

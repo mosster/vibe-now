@@ -1,0 +1,80 @@
+---
+name: security-review
+description: Security review of {{projectName}} (secrets and env, the browser boundary, access between users{{#if isBetterAuth}}, sessions{{/if}}{{#if hasApi}}, the API surface{{/if}}{{#if hasPayments}}, payment webhooks{{/if}}{{#if hasAi}}, prompt injection{{/if}}, SSRF, supply chain). An independent reviewer proves each finding with a safe local reproduction; fixes are verified and a REVIEW_SECURITY file is written. Use {{#if isGated}}at every sub-phase's gate{{else}}before anything is deployed, at the end of a phase{{/if}}, or when asked for a security, secret or threat review.
+---
+
+# Security review
+
+Arg: the phase or sub-phase (e.g. `0`, `0a`).
+
+**Why it's built this way:** the leaks that matter are one user seeing another's data, someone spending our money (paid APIs, LLM credits), and a credential escaping. Every finding is demonstrated locally: never against anything external, with a live paid call, or with a real person's account.
+
+## 1. Automated checks (run first, record the output)
+
+- **Secrets:** search tracked files for key-shaped strings (`git grep -nE '(sk|pk|rk)_(live|test)_|AKIA[0-9A-Z]{16}|-----BEGIN|xox[baprs]-|ghp_'`) and check `.env*` files other than `.env.example` are git-ignored.
+- **Advisories:** `{{{pm.name}}} audit` (production dependencies first). Record dev-only advisories with whether they're reachable.
+- **The browser boundary:** after `{{{pm.run}}} build`, grep the client bundle ({{#if isNextjs}}`.next/static`{{else}}the client output directory{{/if}}) for server-only strings: env key names{{#if hasDatabase}}, `DATABASE_URL`{{/if}}{{#if isSupabase}}, `SUPABASE_SERVICE_ROLE_KEY`{{/if}}{{#if hasPayments}}, the payment secret key names{{/if}}{{#if hasAi}}, the AI provider key names{{/if}}. No matches.
+- **Dependencies:** every declared dependency is imported somewhere (`{{{pm.dlx}}} knip` or `depcheck`); a declared-but-unused package, or a near-name of a real one, is a finding.
+- **Grep for:**
+  - `dangerouslySetInnerHTML`, `eval`, `new Function`, `exec`, `spawn`{{#if isDrizzle}}, `sql.raw`{{/if}}
+  - `process.env` outside the env module and config files
+  - `fetch(` with a URL that comes from input
+
+## 2. Independent review (subagent)
+
+Give a fresh general-purpose subagent the specs, the automated results and this checklist. It must not modify repo files. It reproduces each finding **locally only**: the local dev server, a throwaway database, recorded fixtures for paid APIs, and a local listener for any outbound target. It reports severity, file:line, the attack, the reproduction and a fix, and labels unreproduced findings PLAUSIBLE.
+
+### The cast
+
+Set it up through the product where it can: two users (A and B){{#if isBetterAuth}}, each with their own session{{/if}}, each owning some data; an admin if the app has roles; and a signed-out visitor.
+
+### Checklist
+
+- **Secrets and env:** only in env, validated in one module; never logged, echoed, sent to the browser or put in URLs.{{#if isNextjs}} No secret has a `NEXT_PUBLIC_` prefix.{{else}} No secret has a `VITE_` prefix.{{/if}}
+- **Access.** Try every read and write as A against B's data, and as the signed-out visitor, through every surface ({{#if isNextjs}}Server Actions, route handlers{{else}}server functions, server routes{{/if}}{{#if hasApi}}, the API{{/if}}): nothing of B's reaches A, and an id from elsewhere answers `not found`, never `forbidden`. Call server code directly, not only through the UI: a Server Action or server function is a public endpoint.
+{{#if isBetterAuth}}
+- **Sign-in and sessions:** one answer for every address (no account enumeration); redirects only to our origin; cookies `HttpOnly`, `SameSite=Lax`, `Secure`; sign-out ends the session at once; `BETTER_AUTH_SECRET` is long and random.
+{{/if}}
+{{#if hasApi}}
+- **The API:** every procedure authenticates before doing work and checks input with its schema; rate limits on anything that spends or sends; a state-changing request from another origin is refused.
+{{/if}}
+- **SSRF:** every fetch of a user-supplied URL goes through a guard. Try loopback, `[::1]`, `0.0.0.0`, `169.254.169.254`, private ranges, IPv4-mapped IPv6, a public name that resolves private, a redirect to a private address, non-HTTP schemes, and an endless or huge response.
+{{#if hasAi}}
+- **Prompt injection:** add fixture content that says "ignore your instructions", asks for another user's data, or asks for an action. The model's output stays within its schema, no action happens because of it, and the content is rendered as text, never as HTML.
+{{/if}}
+{{#if hasPayments}}
+- **Payments:** webhook signatures are verified (replays and bad signatures refused); access follows the provider's verified state, never a client redirect's query string; a refund or cancellation removes access.
+{{/if}}
+{{#if isMcp}}
+- **MCP endpoint:** in production it refuses calls without the key (`MCP_API_KEY`), with one answer for a missing and a wrong key; no tool reaches data its caller couldn't reach through the app; tools that write or spend aren't annotated read-only; text from users inside tool results can't be read as instructions (it's labeled as data).
+{{/if}}
+{{#if hasUploads}}
+- **Uploads:** try a file over the size limit, a disallowed type with an allowed extension, an SVG or HTML file with a script, and a path-like file name (`../`): each is refused or stored inertly; uploaded files are served with a safe `Content-Type` (and `Content-Disposition: attachment` where they could run), ideally from a separate origin.
+{{/if}}
+{{#if hasJobs}}
+- **Jobs:** nothing a user controls becomes a job name or a queue; a job's payload can't make the worker act as another user; {{#if isInngest}}the Inngest endpoint verifies the signing key in production{{/if}}{{#if isTrigger}}the Trigger.dev secret key is server-only{{/if}}{{#if isPgBoss}}the worker's database role can't do more than the app's{{/if}}.
+{{/if}}
+{{#if isPostHog}}
+- **Analytics (PostHog):** no secrets, tokens or form contents in events or properties; session replay (if on) masks inputs; the server key, if any, is server-only.
+{{/if}}
+{{#if isSentry}}
+- **Error tracking (Sentry):** events don't carry passwords, tokens or personal data (check `sendDefaultPii` and any `beforeSend` scrubbing); the auth token for source maps is a CI secret, never in the client bundle.
+{{/if}}
+- **Bodies and limits:** authenticate before reading a body, and cap its size; rate limits key on a trusted client address.
+- **Headers:** responses with personal data send `Cache-Control: no-store`; `frame-ancestors`, `X-Content-Type-Options` and `Referrer-Policy` are set.
+- **Injection and output:** SQL only through parameterized queries; no shell with input; untrusted text rendered as text; links from users only `http(s)`.
+- **Logs:** no tokens, keys, passwords or personal data in logs or error reports.
+- **Dependencies:** new packages justified; no unexpected install scripts.
+
+## 3. Verify, fix, record
+
+Same as `backend-review` §3:
+- re-verify each finding
+- fix clear ones, with tests
+- ask before anything destructive
+- record deferred items with a trigger and accepted ones with a reason
+- `{{{pm.run}}} check` green
+
+Write `docs/reviews/REVIEW_SECURITY_<PHASE>_<YYYY-MM-DD>.md` with the same format plus "Automated checks" and "Cast" sections, and add it to the top of `docs/reviews/README.md`.
+
+**Codify:** when a finding is a class of attack a checklist line would have caught, add that line here.

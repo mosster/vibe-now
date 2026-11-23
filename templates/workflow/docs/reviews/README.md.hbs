@@ -1,0 +1,31 @@
+# Reviews
+
+Independent reviews, newest first. {{#if isGated}}They're the gate: every sub-phase runs them before merging ([{{docFile}} → Workflow](../../{{docFile}}#workflow)).{{else}}They run on demand, at the end of a phase or when asked, and a security review runs before anything is deployed ([{{docFile}} → Workflow](../../{{docFile}}#workflow)).{{/if}}{{#if hasSkills}} The review skills in `.claude/skills/` write them.{{/if}}
+
+**Read the latest reviews before speccing.** Their deferred findings and watch list are inputs to the next spec.
+
+## Naming
+
+`REVIEW_<KIND>_<PHASE>_<YYYY-MM-DD>.md`, for example `REVIEW_BACKEND_0A_2027-01-15.md`.
+
+- **KIND:** `BACKEND`, `SECURITY`, `FRONTEND` or `DOCS` (add kinds as the project grows: `UX`, `DESIGN`, `AGENT`).
+- **PHASE:** the phase or sub-phase in capitals (`0`, `0A`, `1-3` for a range). Use `PRE0` before Phase 0 starts.
+- **A second run the same day** is a new file with `-2` at the end. Reviews are append-only: never edit an old one to match a later fix.
+
+## What a review file holds
+
+- **Header:** scope (files, routes or pages), method (an independent reviewer with a fresh context; how findings were reproduced), and a verdict: pass, pass with deferrals, or fail.
+- **Findings:** a table, one row per finding, with severity, where (file:line or route), what was found and how it was verified, and the outcome:
+  - *fixed*, with the test or check that would have caught it;
+  - *deferred*, with the trigger that brings it back;
+  - *accepted*, with the reason;
+  - *rejected*, because it didn't reproduce.
+- **The review's own sections:** automated checks (security, docs), screens checked (frontend), spec coverage (backend).
+- **Inputs for the next phase:** the watch list the next spec must read.
+
+When a review catches a new class of mistake, {{#if hasSkills}}its skill gains a checklist line in the same change{{else}}add a line to the checklist the next review uses{{/if}}.
+
+## Index (newest first)
+
+| Date | Review | Scope | Verdict |
+|---|---|---|---|

@@ -13,6 +13,14 @@ Four new features: framework choice (Next.js vs TanStack Start), AI editor conte
 - [x] **Feature 5: Testing Frameworks** — Vitest + React Testing Library, Playwright, or both
 - [x] **Feature 6: SQLite Databases** — Turso or self-hosted libSQL, both with Drizzle
 - [x] **Feature 7: API Layer** — oRPC (with OpenAPI spec + docs) or tRPC
+- [x] **Feature 8: Plain Postgres** — Postgres + Drizzle via node-postgres, without Supabase
+- [x] **Feature 9: Effect** — Effect (effect-ts v4) with starter service + runtime
+- [x] **Feature 10: Package Managers** — npm, pnpm, Yarn or Bun for the whole scaffold and the generated docs
+- [x] **Feature 11: Phased Development Workflow** — light or gated: Workflow section, docs/ skeleton, check script, review + handoff skills
+- [x] **Feature 12: MCP server** — `/api/mcp`, tools from the oRPC router (or a hand-written registry)
+- [x] **Feature 13: Background Jobs** — pg-boss, Inngest or Trigger.dev
+- [x] **Feature 14: Analytics & Monitoring** — PostHog and/or Sentry
+- [x] **Feature 15: File Uploads** — UploadThing or Cloudflare R2
 
 ---
 
@@ -139,6 +147,102 @@ npx @tanstack/cli create my-app --add-ons shadcn # With add-ons
 - tRPC v11's TanStack Query integration needs a `QueryClient`, so the scaffold uses `createTRPCContext` (provider + `useTRPC`); oRPC's `createTanstackQueryUtils(client)` needs no provider
 - Zod 4 schemas are converted for OpenAPI via `@orpc/zod/zod4`'s `ZodToJsonSchemaConverter`
 - Verified in real Next.js 16 and TanStack Start apps: typecheck, production build, REST/RPC/spec/docs/tRPC endpoints, and both typed clients against a running server
+
+---
+
+## Feature 8: Plain Postgres + Drizzle — DONE
+
+**Prompt**: New `postgres` choice in the Database list, after Supabase. Default stays Supabase.
+
+**Files changed**:
+- `lib/packages.js` — `postgres` provider: installs `drizzle-orm` + `pg`, dev-installs `drizzle-kit` + `@types/pg`; one env var (`DATABASE_URL`); no Supabase packages
+- `plopfile.js` — `isPostgres` template flag; `postgres` added to `isDrizzle`
+- `templates/CLAUDE.md.hbs`, `templates/AGENTS.md.hbs` — `db/index.ts` (node-postgres pool + Drizzle) in the tree; `DATABASE_URL` secret warning
+- `tests/validate-config.js` — provider config, env var, rendering (both frameworks) and API-layer checks
+
+**Key notes**:
+- Driver is node-postgres (`drizzle-orm/node-postgres`), so it works with any Postgres host: local Docker, Neon, Railway, RDS
+- Like the other database choices, it adds packages, guidance and env vars. It does not generate `db/` files
+- The API layer step is still asked (only Convex skips it)
+
+---
+
+## Feature 9: Effect (effect-ts v4) — DONE
+
+**Prompt**: Confirm in a new "Effect System" category, after Validation. Off by default.
+
+**Files changed**:
+- `lib/packages.js` — `effect` item: installs only `effect` (v4 ships http, rpc, sql, schema, cli inside the main package)
+- `lib/scaffolds.js` + `templates/effect/` — `[src/]lib/effect/greeter.ts` (example service with a typed error) and `[src/]lib/effect/runtime.ts` (`AppLayer`, `ManagedRuntime`, `runEffect()` helper)
+- `templates/CLAUDE.md.hbs`, `templates/AGENTS.md.hbs` — `lib/effect/` in the tree (`isEffect` flag)
+
+**Key notes**:
+- Targets Effect 4.x (LTS). v3-only names (`Context.Tag`, `Effect.Service`, `Effect.catchAll`, `@effect/schema`) are wrong in v4; the guidance says so
+- `runEffect()` turns typed failures into `{ ok: false, error: _tag }` so Server Actions / server functions return plain data; defects still reject
+- The usage comment differs per framework (Server Action vs `createServerFn(...).validator(...)`)
+- Needs TypeScript 5.9+ with `strict: true`. Starter files verified with TS 5.9.3 and 7.0.2
+
+---
+
+## Feature 10: Package Managers — DONE
+
+**Prompt**: List after Framework: npm, pnpm, Yarn, Bun. Defaults to the package manager in `npm_config_user_agent` (the one that launched the wizard) if installed, else npm. Package managers not on PATH are disabled.
+
+**Files changed**:
+- `lib/package-managers.js` — New. Holds every package manager difference: add/dev-add, one-off runs (`dlx`), local binaries (`exec`), script prefix (`run`), the `create-next-app` flag, and npm-only `--legacy-peer-deps`
+- `lib/packages.js` — Commands are `{ dlx }` / `{ exec }`; guidance and env comments use `{pm:run}` / `{pm:exec}` / `{pm:dlx}` tokens
+- `plopfile.js` — Base app via the package manager's dlx with `--use-<pm>` (Next.js) or `--package-manager <pm>` (TanStack CLI); installs and init commands through the module; next-steps message uses the chosen package manager
+- `templates/CLAUDE.md.hbs`, `templates/AGENTS.md.hbs`, `templates/README.md.hbs`, `templates/vitest/vitest.config.ts.hbs` — Commands come from `pm` (AGENTS.md gained a Commands section)
+
+**Key notes**:
+- Bun: scripts use `bun run <script>`, because `bun test` runs Bun's own test runner instead of the `test` script
+- Yarn 1 has no `yarn dlx`, so one-off packages fall back to `npx` there; Yarn 2+ uses `yarn dlx`
+- `--legacy-peer-deps` is npm-only; pnpm, Yarn and Bun only warn on peer conflicts
+
+---
+
+## Feature 11: Phased Development Workflow — DONE
+
+**Prompt**: List after the CLAUDE.md / AGENTS.md question: Phased light (default), Phased gated, None.
+
+**Source**: the workflow shared by the founder's apps. seo-auditor is the origin; Ketty (form-builder) copied it (gated); Maestro and social-listening are the light versions. Everything product-specific was left out.
+
+**Files changed**:
+- `lib/workflow.js` — New. The workflows, the review skills and when each runs per rigor, the file map, `workflowData()`, and `gateScripts()` (`typecheck`: `next typegen && tsc --noEmit` on Next.js, `tsc --noEmit` on TanStack; `check`: typecheck, then lint and test when present; never replaces existing scripts)
+- `lib/template-data.js` — New. `buildTemplateData()`: the one data object every generated file renders with (moved out of the plopfile so tests render exactly what the CLI does); renders the Workflow and conventions sections once
+- `lib/scaffolds.js` — Adds the workflow files
+- `plopfile.js` — `workflow` prompt; template data built before the scaffold step; gate scripts written to package.json
+- `templates/workflow/WORKFLOW.md.hbs`, `CONVENTIONS.md.hbs` — The Workflow section (docs layout, spikes, the phase loop at the chosen rigor, sizing, no dates, handoffs, ADRs, git and parallel sessions, the skills table) and the shared conventions (one definition per concept, one place per setting, one service layer, Zod at boundaries, invariant tests, American English)
+- `templates/workflow/docs/` — Master checklist, spec / spike / ADR templates, ADR 0001 (the workflow, recording light vs gated) and ADR 0002 (the starting stack, from the wizard's answers), production-readiness log, and README indexes for research, spikes, decisions, reviews, guides, handoffs
+- `templates/workflow/skills/` — `handoff`, `backend-review`, `security-review`, `frontend-review`, `docs-review` (Claude Code projects only). Generic versions of the founder's skills: an independent fresh-context reviewer who must reproduce every finding, then verify, fix, record and codify. Checklist lines appear only for the parts the stack has (Drizzle, Convex, Supabase, oRPC/tRPC, Better Auth, Effect, AI, payments, shadcn)
+- `templates/CLAUDE.md.hbs`, `templates/AGENTS.md.hbs` — Start here + Status at the top, typecheck/check commands, docs/ (and .claude/skills/) in the tree, the Workflow section, the conventions
+
+**Key notes**:
+- Skill frontmatter descriptions avoid `: ` (an unquoted YAML scalar can't contain it); a test holds that
+- Dates are local (`localDate()`), not UTC
+- The 14-day / exact-pin version rule from the source apps was deliberately left out (the founder's call)
+
+**Fixes found by running the real wizard** (`lib/project-fixes.js`):
+- create-next-app writes AGENTS.md with Next.js rules that `next dev` maintains: CLAUDE.md imports it (`@AGENTS.md`); a generated AGENTS.md keeps the block on top
+- shadcn's generated `components/ui/**` and `hooks/use-mobile.ts` fail eslint-config-next's react-hooks rules: added to `globalIgnores` (kept close to upstream, not edited)
+- shadcn on TanStack Start: `init -d` means `--template=next`, so it fell back to prompts and a Next.js-shaped setup, then crashed. TanStack now runs `init -t start -b base -p nova --no-monorepo -y`, and `@/*` is moved ahead of the CLI's `#/*` tsconfig alias (with `#/*` first, shadcn can't detect the alias). Commands can carry `frameworks: [...]`
+- Typecheck on a fresh TanStack project: the route tree doesn't exist yet, so `typecheck` runs `generate-routes` first
+
+---
+
+## Features 12–15: MCP, Background Jobs, Analytics & Monitoring, File Uploads — DONE
+
+Each was researched and verified in real Next.js 16 and TanStack Start 1.169 apps before it was added (typecheck, production build, and a runtime check per provider).
+
+**Shared mechanics** (`lib/selection.js`): `selectPackages()` resolves a selection for the CLI and the tests alike; configs may declare `installByFramework` / `devInstallByFramework`, `envVarsByFramework` (`NEXT_PUBLIC_*` vs `VITE_*`) and `guidance` as a function of the answers; a list choice may declare `requires(answers)`, which shows it disabled with the reason (`listChoices()`); commands may carry `frameworks: [...]`. `getScaffoldScripts()` adds the package.json scripts an option needs, never replacing existing ones. Config-file edits live in `lib/project-fixes.js`, applied through `editFile()`; when an anchor is missing the wizard prints the manual step.
+
+**MCP** (`templates/mcp/`): `@modelcontextprotocol/server` 2.x (the stable v2 line), `createMcpHandler(...).fetch(request)`, stateless. With oRPC, `orpc-tools.ts` walks the router (`resolveContractProcedures`), converts each procedure's Zod input/output with the same converter as the OpenAPI spec, infers read-only/idempotent hints from the HTTP method, and calls through `createRouterClient` with a passthrough schema so oRPC validates exactly once (oRPC's own `@orpc/mcp` is beta and needs oRPC 2). Without oRPC (or with tRPC): one `registerTool` example. `MCP_API_KEY` → bearer auth; unset → localhost only (host/origin checks).
+
+**Background Jobs** (`templates/jobs/`): pg-boss v12 (only `server/jobs/index.ts` imports it; `defineJob` + registry + Zod-validated `enqueue`; queues created before use; separate `worker.ts` with graceful SIGTERM; `@opentelemetry/api` listed because it's a required peer npm's `--legacy-peer-deps` won't add); requires Postgres or Supabase. Inngest v4 (`inngest/next`, or `inngest/edge` on TanStack: there's no TanStack adapter; `INNGEST_DEV=1` locally or the endpoint answers 500). Trigger.dev v4 (`schemaTask`, `tasks.trigger` with `import type`, `.trigger` git-ignored).
+
+**Analytics & Monitoring** (`templates/analytics/`): one shared browser entry (`instrumentation-client.ts` on Next.js, `src/client.tsx` on TanStack). PostHog: `posthog-js` (+ `@posthog/react` on TanStack) and a `posthog-node` server helper; Next.js gets an `/ingest` reverse proxy in `next.config.ts` (only when it can be added safely). Sentry: `@sentry/nextjs` (instrumentation, server/edge configs, `global-error.tsx`, `withSentryConfig` from `@sentry/nextjs/config`) or `@sentry/tanstackstart-react` (beta: custom server/start entries, the Vite plugin, `.env.sentry-build-plugin` git-ignored). Build-plugin telemetry is off. Both SDKs do nothing without keys.
+
+**File Uploads** (`templates/uploads/`): UploadThing 7 (file router with an auth hook in `.middleware()`, typed client helpers, Tailwind v4 `ut-*` variants via `@import "uploadthing/tw/v4"` + `@source`). It's disabled next to Effect v4: UploadThing bundles Effect 3, and npm's `--legacy-peer-deps` (or Yarn 1/Bun hoisting) resolves it against v4, breaking the build or every request. R2: `server/storage.ts` owns the AWS SDK client (`region: 'auto'`, `requestChecksumCalculation: 'WHEN_REQUIRED'`, since the default checksum breaks presigned PUTs), presigned PUTs sign `Content-Type` and `Content-Length`, keys are generated on the server; verified end to end against MinIO.
 
 ---
 

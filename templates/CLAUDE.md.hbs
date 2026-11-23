@@ -1,6 +1,16 @@
 # {{projectName}}
 
-## Tech Stack
+{{#if isNextjs}}
+Next.js's own agent rules (kept current by `next dev`): @AGENTS.md
+
+{{/if}}
+{{#if hasWorkflow}}
+**Start here:** read `docs/phases/SPEC_MASTER_CHECKLIST.md` (where we are), the latest `docs/handoffs/` entry, and the current sub-phase spec before changing anything. The reasoning lives in `docs/research/`, the decisions in `docs/decisions/`.
+
+## Status
+- Scaffolded; Phase 0 not started. Keep this section to a few lines (it loads into every session): the detail lives in `docs/phases/SPEC_MASTER_CHECKLIST.md`.
+
+{{/if}}## Tech Stack
 {{#if isNextjs}}
 - **Framework**: Next.js 15+ (App Router)
 {{else}}
@@ -13,17 +23,24 @@
 {{/each}}
 
 ## Commands
-- Dev: `npm run dev`
-- Build: `npm run build`
-- Lint: `npm run lint`
-- Start: `npm start`
+Package manager: **{{pm.name}}**. Use it for every install and script (never mix in another package manager's lockfile).
+- Install: `{{pm.install}}`
+- Add a dependency: `{{pm.add}} <pkg>`
+- Dev: `{{pm.run}} dev`
+- Build: `{{pm.run}} build`
+- Lint: `{{pm.run}} lint`
+- Start: `{{pm.run}} start`
+{{#if hasWorkflow}}
+- Typecheck: `{{pm.run}} typecheck`
+- Check (the gate: typecheck{{#if isNextjs}}, lint{{/if}}{{#if isVitest}}, unit tests{{/if}}): `{{pm.run}} check`
+{{/if}}
 {{#if isVitest}}
-- Unit Test: `npm test`
-- Unit Test (watch): `npm run test:watch`
+- Unit Test: `{{pm.run}} test`
+- Unit Test (watch): `{{pm.run}} test:watch`
 {{/if}}
 {{#if isPlaywright}}
-- E2E Test: `npx playwright test`
-- E2E Test (UI): `npx playwright test --ui`
+- E2E Test: `{{pm.exec}} playwright test`
+- E2E Test (UI): `{{pm.exec}} playwright test --ui`
 {{/if}}
 
 ## Directory Structure
@@ -37,6 +54,9 @@ hooks/            # Custom React hooks (prefixed with use)
 lib/              # Utilities, constants, configs
   utils.ts        # cn() helper (Tailwind merge + clsx)
   constants.ts    # Global constants & env config
+{{#if isEffect}}
+  effect/         # Effect services (greeter.ts example) + shared runtime (runtime.ts)
+{{/if}}
 {{#if isORPC}}
   orpc.ts         # Typed oRPC client (+ TanStack Query helpers)
 {{/if}}
@@ -48,6 +68,24 @@ server/orpc/      # oRPC router & handlers (RPC /api/rpc, REST + docs /api/v1)
 {{/if}}
 {{#if isTRPC}}
 server/trpc/      # tRPC init, router & handler (/api/trpc)
+{{/if}}
+{{#if isMcp}}
+server/mcp/       # MCP endpoint (/api/mcp){{#if isORPC}}: tools from the oRPC router{{/if}}
+{{/if}}
+{{#if isPgBoss}}
+server/jobs/      # Background jobs (pg-boss): defineJob, registry, enqueue; run by worker.ts
+{{/if}}
+{{#if isInngest}}
+inngest/          # Inngest client, typed events and functions (served at /api/inngest)
+{{/if}}
+{{#if isTrigger}}
+trigger/          # Trigger.dev tasks (trigger.config.ts at the project root)
+{{/if}}
+{{#if isUploadThing}}
+server/uploadthing.ts # UploadThing file router (/api/uploadthing)
+{{/if}}
+{{#if isR2}}
+server/storage.ts # R2 storage: presigned uploads and file URLs (/api/uploads)
 {{/if}}
 {{else}}
 src/              # Source root
@@ -61,6 +99,9 @@ src/              # Source root
   lib/            # Utilities, constants, configs
     utils.ts      # cn() helper (Tailwind merge + clsx)
     constants.ts  # Global constants & env config
+{{#if isEffect}}
+    effect/       # Effect services (greeter.ts example) + shared runtime (runtime.ts)
+{{/if}}
 {{#if isORPC}}
     orpc.ts       # Typed oRPC client (+ TanStack Query helpers)
 {{/if}}
@@ -73,6 +114,24 @@ src/              # Source root
 {{#if isTRPC}}
   server/trpc/    # tRPC init, router & handler (/api/trpc)
 {{/if}}
+{{#if isMcp}}
+  server/mcp/     # MCP endpoint (/api/mcp){{#if isORPC}}: tools from the oRPC router{{/if}}
+{{/if}}
+{{#if isPgBoss}}
+  server/jobs/    # Background jobs (pg-boss): defineJob, registry, enqueue; run by worker.ts
+{{/if}}
+{{#if isInngest}}
+  inngest/        # Inngest client, typed events and functions (served at /api/inngest)
+{{/if}}
+{{#if isTrigger}}
+  trigger/        # Trigger.dev tasks (trigger.config.ts at the project root)
+{{/if}}
+{{#if isUploadThing}}
+  server/uploadthing.ts # UploadThing file router (/api/uploadthing)
+{{/if}}
+{{#if isR2}}
+  server/storage.ts # R2 storage: presigned uploads and file URLs (/api/uploads)
+{{/if}}
   client.tsx      # Client entry
   router.tsx      # Router configuration
   routeTree.gen.ts # Auto-generated route tree (do not edit)
@@ -82,6 +141,9 @@ src/              # Source root
 db/               # Database schema & migrations (Drizzle)
 {{#if isSQLite}}
   index.ts        # libSQL client + Drizzle instance
+{{/if}}
+{{#if isPostgres}}
+  index.ts        # node-postgres pool + Drizzle instance
 {{/if}}
   schema.ts       # Drizzle schema definitions
   migrations/     # SQL migration files
@@ -97,7 +159,17 @@ e2e/              # Playwright E2E tests
 {{/if}}
 types/            # Global TypeScript interfaces
 public/           # Static assets
+{{#if hasWorkflow}}
+docs/             # Research, spikes, phase specs, ADRs, reviews, guides, handoffs (see Workflow)
+{{/if}}
+{{#if hasSkills}}
+.claude/skills/   # Review and handoff skills (see Workflow → Skills)
+{{/if}}
 ```
+{{#if hasWorkflow}}
+
+{{{workflowSection}}}
+{{/if}}
 
 ## Code Conventions
 - Files & directories: `kebab-case`
@@ -114,7 +186,10 @@ public/           # Static assets
 - Use TanStack Router's `useSearch` for type-safe URL state
 {{/if}}
 - Never use `useState`/`useEffect` for data fetching
-- Never expose secret env vars to the client{{#if isSupabase}} (e.g., Supabase `service_role` key){{/if}}{{#if isConvex}} (e.g., `CONVEX_SELF_HOSTED_ADMIN_KEY`){{/if}}{{#if isTurso}} (e.g., `TURSO_AUTH_TOKEN`){{/if}}
+- Never expose secret env vars to the client{{#if isSupabase}} (e.g., Supabase `service_role` key){{/if}}{{#if isConvex}} (e.g., `CONVEX_SELF_HOSTED_ADMIN_KEY`){{/if}}{{#if isTurso}} (e.g., `TURSO_AUTH_TOKEN`){{/if}}{{#if isPostgres}} (e.g., `DATABASE_URL`, which contains the DB password){{/if}}
+{{#if hasWorkflow}}
+{{{conventionsSection}}}
+{{/if}}
 
 ## Library Guidance
 {{#each selectedPackages}}

@@ -1,0 +1,11 @@
+import { z } from 'zod';
+import { defineJob } from './define';
+
+// Example job. Replace the body with real work (send an email, call an API, ...).
+export const welcomeEmail = defineJob(
+  'welcome-email',
+  z.object({ userId: z.string(), email: z.email() }),
+  async ({ userId, email }, { id }) => {
+    console.log(`[jobs] welcome-email ${id}: sending welcome email to ${email} (user ${userId})`);
+  },
+);

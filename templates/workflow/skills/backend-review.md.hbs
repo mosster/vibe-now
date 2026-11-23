@@ -1,0 +1,119 @@
+---
+name: backend-review
+description: Adversarial backend review of {{projectName}}'s server code ({{#if isNextjs}}Server Actions, route handlers{{else}}server functions, server routes{{/if}}{{#if hasApi}}, the {{#if isORPC}}oRPC{{/if}}{{#if isTRPC}}tRPC{{/if}} router{{/if}}{{#if hasDatabase}}, the database schema and queries{{/if}}, services, scripts and tests) against the phase's specs and CLAUDE.md. An independent reviewer reads the code in full and proves each finding by reproducing it; the author re-verifies, fixes, and writes a REVIEW_BACKEND file. Use {{#if isGated}}at every sub-phase's gate{{else}}at the end of a phase or sub-phase{{/if}}, or when asked for a backend or code review.
+---
+
+# Backend review
+
+Arg: the phase or sub-phase (e.g. `0`, `0a`). The scope is the code that phase added or changed.
+
+**Why it's built this way:** an author reviewing their own code reads it as they meant it. Reviews catch real defects when the reviewer has to *reproduce* each one, and the review that finds the most is the one that reads every file in full. {{#if isGated}}This is part of every sub-phase's gate (CLAUDE.md, Workflow).{{else}}It runs on demand: at the end of a phase, or when asked (CLAUDE.md, Workflow).{{/if}}
+
+## 1. Scope
+
+- **Specs:** `docs/phases/phase-N/SPEC_PHASE_N*.md`, including their exit checklists, Agent surface, Cost and latency budget{{#if hasDatabase}} and Query budget{{/if}} sections, and any notes from the build. Rules: CLAUDE.md (Code Conventions, Library Guidance) and the ADRs the specs link.
+- **Code:** `git diff main...HEAD --stat` for the branch; on `main`, the files the specs name.
+- **Earlier reviews:** `docs/reviews/REVIEW_*`: deferred items whose trigger is now met, and the watch list.
+
+## 2. Independent review (subagent)
+
+Launch a general-purpose subagent (fresh context). Don't review in the same context that wrote the code. Its brief:
+
+- "Adversarial BACKEND review of {{projectName}} Phase <N> in <repo path>. Do NOT modify repo files. Read `.claude/skills/backend-review/SKILL.md` (this checklist), CLAUDE.md and the specs <paths>."
+- "Read every file in scope IN FULL. For each suspected defect, **verify it**: read the surrounding code and the library's source in `node_modules`{{#if isEffect}} (Effect 4's guide is `node_modules/effect/CLAUDE.md`){{/if}}, and run throwaway scripts in a scratch directory outside the repo."
+{{#if hasDatabase}}
+  - "Reproduce against a throwaway database (a copy or a fresh one migrated from the schema), never the dev database, and drop it afterwards."
+{{/if}}
+  - "**Never make a live paid call** (LLMs, email, payments, third-party APIs). Use recorded fixtures or fakes."
+  - "Label anything you couldn't reproduce PLAUSIBLE."
+- "Report per finding: severity (high / medium / low), file:line, the defect, the concrete failure (input or state → wrong result), how it was verified, and a suggested fix. Then a spec conformance section (each exit item: done, partial, missing)."
+
+### Checklist
+
+- **Crashes and resources:** no floating promises in request paths; every pool, client and stream closed once; a timeout on every database, provider and outbound call; errors from connections and emitters handled, never left to crash the process.
+- **Access:** every service checks who's calling and what they may do, itself, never trusting that its caller checked. Another user's or tenant's id answers exactly like a missing one (not found, never forbidden), so ids can't be probed.
+{{#if isBetterAuth}}
+- **Sessions (Better Auth):** session resolution happens on the server for every protected read and write; no route trusts a client-sent user id; sign-out ends the session at once.
+{{/if}}
+{{#if hasDatabase}}
+- **Data:**
+  - every query that reads someone's data filters by its owner inside the query, never after a `LIMIT` over everyone's rows;
+  - lists use keyset (cursor) pagination with a unique tiebreaker, never offset over a growing table;
+  - no N+1, including loops over users or rows that each query;
+{{#if isDrizzle}}
+  - schema changes come with a generated migration that was read and applied to an empty and an existing database;
+  - queries only through Drizzle (raw `sql` only with parameters, never string-built);
+{{/if}}
+{{#if isConvex}}
+  - Convex queries and mutations validate their arguments and check identity (`ctx.auth`) before touching data; internal functions aren't callable from the client;
+{{/if}}
+{{#if isSupabase}}
+  - the `service_role` key is used only on the server, and row-level security is on for every table the browser can reach;
+{{/if}}
+  - money is stored as integers in minor units with a currency; an unknown cost is null, never 0.
+{{/if}}
+- **Idempotency:** a retried request, webhook or job does its work once (an idempotency key claimed before the side effect, a unique constraint behind it). Test concurrent same-key calls, not only sequential ones.
+{{#if hasApi}}
+- **API layer:** procedures validate input with their schema and stay thin over services; errors reach callers as our own wording, never a driver's, SDK's or Zod's; the same rules apply on every surface (RPC, REST, server code calling the router directly).
+{{/if}}
+{{#if isEffect}}
+- **Effect 4:** every error a caller can see is a tagged error mapped to one error shape at the boundary; defects are logged, never swallowed; retries and timeouts are `Schedule`s; Effect 4 APIs, not Effect 3 idioms (`Effect.catchAll`, `Context.Tag`).
+{{/if}}
+{{#if hasAi}}
+- **LLM calls:** model output is parsed by a schema and bounded; it never triggers a write, a send or a payment by itself. Untrusted text (user content, fetched pages) is delimited and labeled as data in every prompt.
+{{/if}}
+{{#if hasPayments}}
+- **Payments:** webhooks verify their signature before reading the body's claims, are deduplicated by event id, and the order of events can't grant access twice or skip a cancellation.
+{{/if}}
+{{#if isMcp}}
+- **MCP:** every tool is a thin mapping over the same procedure or service the app uses (no second implementation); a tool's input schema is the procedure's; errors reach the agent as our own wording with one next step; a tool that writes is never annotated read-only.
+{{/if}}
+{{#if hasJobs}}
+- **Background jobs:**
+  - payloads carry ids, never whole records or secrets; the handler reloads what it needs;
+  - every handler is idempotent under redelivery and retries (a job run twice changes nothing the second time);
+{{#if isPgBoss}}
+  - only the jobs module imports pg-boss; queues are created before use; the worker shuts down gracefully on SIGTERM and finishes or releases its jobs;
+{{/if}}
+{{#if isInngest}}
+  - side effects live inside `step.run` so a retried function doesn't repeat finished steps; event names come from one place;
+{{/if}}
+{{#if isTrigger}}
+  - tasks are idempotent (an idempotency key on `trigger` where a duplicate would hurt); payloads are validated with a schema;
+{{/if}}
+  - a failed job records a safe reason, never a raw error with secrets.
+{{/if}}
+{{#if hasUploads}}
+- **File uploads:** size and type limits are enforced on the server, not only in the browser; object keys are generated on the server, never taken from the file name; reads and deletes check that the caller owns the file{{#if isR2}}; presigned URLs are short-lived and bound to one key and content type{{/if}}.
+{{/if}}
+- **Outbound requests:** any fetch of a user-supplied URL is guarded against private addresses (loopback, `169.254.169.254`, private ranges) and redirects to them; bodies and time are capped.
+- **Env and secrets:** env read through one validated module; `.env.example` lists every key; no secret in logs, errors or responses.
+- **Error text:** stored and returned text is our own wording; input errors are 4xx, our bugs 500, outages 503; `details` echo only the caller's own input.
+- **Tests:** would each invariant's test **fail if the invariant broke**? Fixtures are shaped like real data, with no real person in them. No test passes only because of another test's state: run the suite twice back to back.
+- **DRY:** a limit, price, model id or setting defined twice; a literal copied from a named constant; a second hand-written list of a registry's members.
+- **Behavior, not columns:** a test for a feature observes what people see, not only the column it sets.
+
+## 3. Verify, fix, record
+
+1. **Re-verify** each finding yourself with a quick reproduction. Reject the ones that don't reproduce, and say so.
+2. **Fix** what's clearly right, with a test that would have caught it. Ask before anything destructive.
+3. **Record the rest:** *deferred* with the trigger that brings it back, or *accepted* with the reason.
+4. `{{{pm.run}}} check` must be green.
+5. **Write** `docs/reviews/REVIEW_BACKEND_<PHASE>_<YYYY-MM-DD>.md` (append-only; `-2` for a second run the same day), then add it to the top of `docs/reviews/README.md`:
+
+```markdown
+# Review: backend · Phase <N> · <date>
+
+- **Scope:** <files or diff>
+- **Method:** independent reviewer; findings reproduced; author re-verified
+- **Verdict:** pass | pass with deferrals | fail
+
+## Findings
+| # | Severity | Where | Finding (verified) | Outcome |
+|---|---|---|---|---|
+
+## Spec coverage
+## Inputs for the next phase
+```
+
+6. **Codify:** when a finding is a class of mistake a checklist line would have caught, add that line to this skill's checklist. The skill improves with each review.

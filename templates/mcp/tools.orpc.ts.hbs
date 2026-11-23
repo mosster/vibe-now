@@ -1,0 +1,9 @@
+import type { McpServer } from '@modelcontextprotocol/server';
+import { router } from '@/server/orpc/router';
+import { registerRouterTools } from './orpc-tools';
+
+// Every procedure in the oRPC router is exposed as an MCP tool (name = router key).
+// Prefer adding procedures to server/orpc/router.ts; register MCP-only tools here if you must.
+export async function registerTools(server: McpServer): Promise<void> {
+  await registerRouterTools(server, router);
+}

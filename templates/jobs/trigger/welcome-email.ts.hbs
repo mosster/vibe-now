@@ -1,0 +1,13 @@
+import { logger, schemaTask } from '@trigger.dev/sdk';
+import { z } from 'zod';
+
+// Example task. Runs on Trigger.dev's workers (or locally under `trigger dev`), not in your web server.
+export const welcomeEmail = schemaTask({
+  id: 'welcome-email',
+  schema: z.object({ userId: z.string(), email: z.email() }),
+  run: async ({ userId, email }) => {
+    logger.info('Sending welcome email', { userId, email });
+    // Replace with real work (send an email, call an API, ...). Throw to fail + retry.
+    return { sent: true };
+  },
+});

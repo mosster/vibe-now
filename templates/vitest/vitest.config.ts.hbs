@@ -12,7 +12,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
 {{#if isPlaywright}}
-    // Playwright specs in e2e/ run via `npx playwright test`, not Vitest
+    // Playwright specs in e2e/ run via `{{pm.exec}} playwright test`, not Vitest
     exclude: [...configDefaults.exclude, 'e2e/**'],
 {{/if}}
   },

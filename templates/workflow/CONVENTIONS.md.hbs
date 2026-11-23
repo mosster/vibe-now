@@ -1,0 +1,9 @@
+- **One definition per concept:** when several layers treat a concept's members alike (roles, plans, statuses, providers), it's one typed registry every layer reads, and surfaces are generated from it. A second hand-written list of the same members is a bug.
+- **One place for each setting:** a limit, price, timeout, schedule or model id is a named constant in `{{src}}lib/constants.ts` or an env key validated in one env module, with `.env.example` listing every key. A copied literal is a review finding.
+- **One service layer:** {{#if hasApi}}API procedures, {{/if}}{{#if isNextjs}}Server Actions and route handlers{{else}}server functions and server routes{{/if}} are thin mappings over services; logic used in two places lives once, in the module that owns its concern.
+{{#if hasZod}}
+- **Schemas:** Zod at every boundary: inputs, outputs, env, webhooks, third-party responses and LLM outputs.
+{{/if}}
+- **Tests:** every spec invariant has a test that would fail if the invariant broke. Fixtures are shaped like real data, with no real person in them.
+- **Commands:** add each new script to the Commands section with one line on what it does.
+- **American English** in every word a person or agent reads: color, center, organize, never colour, centre, organise.

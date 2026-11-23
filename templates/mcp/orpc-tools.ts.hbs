@@ -1,0 +1,174 @@
+import type {
+  CallToolResult,
+  McpServer,
+  StandardSchemaWithJSON,
+  ToolAnnotations,
+} from '@modelcontextprotocol/server';
+import { toORPCError } from '@orpc/client';
+import { type AnyRouter, createRouterClient, resolveContractProcedures } from '@orpc/server';
+import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
+
+/**
+ * Optional per-procedure MCP overrides. Opt in with a typed builder:
+ *   const base = os.$meta<McpMeta>({});
+ *   base.meta({ mcp: { name: 'greet', annotations: { openWorldHint: false } } }).route(...)...
+ * `mcp: false` keeps a procedure out of the MCP server.
+ * Field names match @orpc/mcp's `mcp.tool()` (oRPC v2) so a later switch is mechanical.
+ */
+export interface McpToolMeta {
+  name?: string;
+  title?: string;
+  description?: string;
+  annotations?: ToolAnnotations;
+}
+export interface McpMeta {
+  mcp?: McpToolMeta | false;
+}
+
+type JsonSchema = Record<string, unknown>;
+type ProcedureFn = (input: unknown, options?: { signal?: AbortSignal }) => Promise<unknown>;
+
+interface ToolDefinition {
+  name: string;
+  path: readonly string[];
+  /** Non-object inputs are nested under `input`, since MCP tool arguments must be an object. */
+  wrapped: boolean;
+  hasInput: boolean;
+  config: {
+    title?: string;
+    description?: string;
+    inputSchema: StandardSchemaWithJSON;
+    outputSchema?: StandardSchemaWithJSON;
+    annotations?: ToolAnnotations;
+  };
+}
+
+// Same converter the OpenAPI handler uses, so MCP and /api/v1/spec.json describe identical schemas.
+const converter = new ZodToJsonSchemaConverter();
+
+const METHOD_ANNOTATIONS: Record<string, ToolAnnotations> = {
+  GET: { readOnlyHint: true },
+  HEAD: { readOnlyHint: true },
+  PUT: { idempotentHint: true },
+  DELETE: { idempotentHint: true },
+};
+
+function toJsonSchema(schema: unknown, strategy: 'input' | 'output'): [required: boolean, JsonSchema] {
+  // oRPC schemas are Standard Schemas of any vendor; the converter checks for Zod itself
+  const s = schema as Parameters<typeof converter.convert>[0];
+  if (!converter.condition(s)) return [true, {}]; // non-Zod schema: advertise "any", oRPC still validates
+  const [required, converted] = converter.convert(s, { strategy });
+  const json: JsonSchema = { ...converted };
+  delete json.$schema;
+  return [required, json];
+}
+
+/**
+ * Advertises a JSON Schema to MCP clients but skips the SDK's own validation:
+ * oRPC validates (and applies defaults/transforms) exactly once, inside the procedure call.
+ */
+function passthrough(jsonSchema: JsonSchema): StandardSchemaWithJSON {
+  const get = () => jsonSchema;
+  return {
+    '~standard': {
+      vendor: 'orpc',
+      version: 1,
+      validate: (value: unknown) => ({ value }),
+      jsonSchema: { input: get, output: get },
+    },
+  } as StandardSchemaWithJSON;
+}
+
+async function collectTools(router: AnyRouter): Promise<ToolDefinition[]> {
+  const tools: ToolDefinition[] = [];
+  await resolveContractProcedures({ router, path: [] }, ({ contract, path }) => {
+    const def = contract['~orpc'];
+    const meta = (def.meta as McpMeta).mcp;
+    if (meta === false) return;
+
+    let inputJson: JsonSchema = { type: 'object', properties: {} };
+    let wrapped = false;
+    if (def.inputSchema) {
+      const [required, json] = toJsonSchema(def.inputSchema, 'input');
+      wrapped = json.type !== 'object';
+      inputJson = wrapped
+        ? { type: 'object', properties: { input: json }, ...(required ? { required: ['input'] } : {}) }
+        : json;
+    }
+
+    let outputJson: JsonSchema | undefined;
+    if (def.outputSchema) {
+      const [required, json] = toJsonSchema(def.outputSchema, 'output');
+      if (required && json.type === 'object') outputJson = json;
+    }
+
+    const route = def.route;
+    const inferred = route.method ? METHOD_ANNOTATIONS[route.method] : undefined;
+    const annotations = inferred || meta?.annotations ? { ...inferred, ...meta?.annotations } : undefined;
+
+    const name = meta?.name ?? route.operationId ?? path.join('_');
+    if (tools.some((t) => t.name === name)) {
+      throw new TypeError(`[mcp] Duplicate tool name "${name}" (${path.join('.')}). Set meta.mcp.name.`);
+    }
+    tools.push({
+      name,
+      path,
+      wrapped,
+      hasInput: def.inputSchema !== undefined,
+      config: {
+        title: meta?.title ?? route.summary,
+        description: meta?.description ?? route.description ?? route.summary,
+        inputSchema: passthrough(inputJson),
+        outputSchema: outputJson && passthrough(outputJson),
+        annotations,
+      },
+    });
+  });
+  return tools;
+}
+
+function textResult(value: unknown, isError = false): CallToolResult {
+  return { content: [{ type: 'text', text: JSON.stringify(value ?? null) }], ...(isError ? { isError } : {}) };
+}
+
+const cache = new WeakMap<AnyRouter, Promise<ToolDefinition[]>>();
+
+/**
+ * Registers every procedure of an oRPC router as an MCP tool. Calls go through
+ * `createRouterClient`, so input/output validation, middleware and handlers are the
+ * same ones the RPC and OpenAPI endpoints use. Errors become `isError` tool results
+ * carrying the oRPC error JSON (code, message, data.issues for validation failures).
+ */
+export async function registerRouterTools(
+  server: McpServer,
+  router: AnyRouter,
+  context: Record<string, unknown> = {},
+): Promise<void> {
+  let tools = cache.get(router);
+  if (!tools) {
+    tools = collectTools(router);
+    cache.set(router, tools);
+  }
+  // Walked dynamically by router path, so the typed client is treated as a plain object tree
+  const client: unknown = createRouterClient(router, { context });
+
+  for (const tool of await tools) {
+    const call = tool.path.reduce<unknown>((node, key) => (node as Record<string, unknown>)[key], client) as ProcedureFn;
+    server.registerTool(tool.name, tool.config, async (args, ctx) => {
+      const raw = (args ?? {}) as Record<string, unknown>;
+      const input = !tool.hasInput ? undefined : tool.wrapped ? raw.input : raw;
+      try {
+        const output = await call(input, { signal: ctx.mcpReq.signal });
+        const structured =
+          output !== null && typeof output === 'object' && !Array.isArray(output)
+            ? (output as Record<string, unknown>)
+            : { result: output };
+        return { ...textResult(output), structuredContent: structured };
+      } catch (error) {
+        const orpcError = toORPCError(error);
+        if (orpcError.code === 'INTERNAL_SERVER_ERROR') console.error('[mcp]', tool.name, error);
+        return textResult(orpcError.toJSON(), true);
+      }
+    });
+  }
+}

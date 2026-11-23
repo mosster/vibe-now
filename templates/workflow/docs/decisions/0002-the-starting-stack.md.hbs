@@ -1,0 +1,28 @@
+# 0002: The starting stack
+
+- **Status:** Accepted
+- **Date:** {{{date}}}
+- **Phase / spec:** Pre-0 (chosen when the repo was scaffolded with vibe-now)
+
+## Context
+
+{{projectName}} was scaffolded with these choices. Recording them as a decision means a later change is a deliberate one, with its reasons, rather than drift.
+
+## Decision
+
+- **Framework:** {{#if isNextjs}}Next.js (App Router){{else}}TanStack Start (file-based routing){{/if}}, TypeScript (strict), Tailwind CSS
+- **Package manager:** {{pm.name}} (every install and script goes through it; one lockfile)
+{{#each selectedPackages}}
+- {{{this.name}}}
+{{/each}}
+
+How each is used is in `{{docFile}}` → Library Guidance.
+
+## Consequences
+
+- Each choice's conventions apply from the first commit (`{{docFile}}`).
+- Changing one (a new database, another API layer) takes a new ADR that supersedes this one for that choice, plus an update to `{{docFile}}`.
+
+## Options considered
+
+The alternatives were the wizard's other choices at each step. Record the reasons for any choice that matters in `docs/research/RESEARCH_STACK.md`.

@@ -1,0 +1,42 @@
+# 0001: The product development workflow
+
+- **Status:** Accepted
+- **Date:** {{{date}}}
+- **Phase / spec:** Pre-0 (chosen when the repo was scaffolded)
+
+## Context
+
+Every coding session starts with a fresh context, often a different model, so what matters has to live in the repo rather than in a conversation. Planning a whole project up front fails because early work invalidates later assumptions. Authors reviewing their own work read it as they meant it, so defects get through unless someone else reproduces them.
+
+## Decision
+
+1. Work is **phased**: phases in `docs/phases/SPEC_MASTER_CHECKLIST.md` split into sub-phases, and only the **current** sub-phase gets a spec (from `docs/phases/SPEC_TEMPLATE.md`).
+2. Uncertain questions get a **spike** first: hypotheses with pass bars, a time box and a $ budget, a throwaway prototype, measured results.
+3. Real decisions become **ADRs** in `docs/decisions/`, append-only once Accepted.
+{{#if isGated}}
+4. **Gated:** each sub-phase ends with `{{{pm.run}}} check` green and independent reviews (backend, security, docs every time; frontend for UI changes) recorded in `docs/reviews/`. Every finding is reproduced by a fresh-context reviewer, then fixed or deferred with a trigger.
+{{else}}
+4. **Light:** a sub-phase is done when its exit checklist is ticked and `{{{pm.run}}} check` is green. Reviews run on demand, at the end of a phase or when asked, and a security review runs before anything is deployed. Findings are recorded in `docs/reviews/`.
+{{/if}}
+5. A session that ends mid-flight writes a **handoff** in `docs/handoffs/`; the next session reads it first.
+6. One branch per sub-phase (`phase-N<x>-<slug>`), merged into `main` when it's done.
+
+The process is written out in `{{docFile}}` → Workflow{{#if hasSkills}}, with the review and handoff skills in `.claude/skills/`{{/if}}.
+
+## Consequences
+
+- Specs stay small and current; the master checklist is the one place that says where we are.
+- Reviews and handoffs cost time each sub-phase, and repay it in defects caught before they compound and in sessions that resume without re-explaining.
+{{#if isGated}}
+- The gate slows the first weeks. Revisit if it routinely finds nothing (the trigger: three clean sub-phases in a row).
+{{else}}
+- With no formal gate, quality rests on the conventions and the self-check. Revisit after the MVP, or sooner if a defect a review would have caught reaches people (the trigger).
+{{/if}}
+
+## Options considered
+
+| Option | Why not (or why) |
+|---|---|
+| Light: reviews on demand | {{#if isLight}}Chosen: speed to the MVP matters most now{{else}}Faster, but lets defects compound between reviews{{/if}} |
+| Gated: independent reviews every sub-phase | {{#if isGated}}Chosen: correctness matters more than speed{{else}}Safer, but slower than the MVP needs; revisit after it{{/if}} |
+| No written process | Every session would start from scratch, and plans would live in chats that vanish |

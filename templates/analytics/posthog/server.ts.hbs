@@ -1,0 +1,46 @@
+// Server-side PostHog (posthog-node) for events from {{#if isNextjs}}route handlers, Server Actions and Server Components{{else}}server functions and server routes{{/if}}.
+// Server-only: never import this from client code.
+{{#if isNextjs}}
+import { after } from 'next/server';
+{{/if}}
+import { PostHog, type EventMessage } from 'posthog-node';
+
+{{#if isNextjs}}
+const token = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+{{else}}
+const token = import.meta.env.VITE_POSTHOG_PROJECT_TOKEN;
+const host = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com';
+{{/if}}
+
+// One client per server process (kept on globalThis so dev hot reloads don't create more).
+const globalForPostHog = globalThis as unknown as { posthogServer?: PostHog };
+
+/** The shared posthog-node client. Disabled (sends nothing) when no project token is set. */
+export function getPostHogServer(): PostHog {
+  globalForPostHog.posthogServer ??= new PostHog(token || 'phc_unset', {
+    host,
+    // Serverless functions can freeze right after the response: send each event at once, no batching
+    flushAt: 1,
+    flushInterval: 0,
+    disabled: !token,
+  });
+  return globalForPostHog.posthogServer;
+}
+
+{{#if isNextjs}}
+/**
+ * Captures a server-side event without delaying the response: the event is flushed with `after()`,
+ * once the response has been sent. Call it inside a request (route handler, Server Action, Server Component).
+ */
+export function captureServerEvent(event: EventMessage): void {
+  const posthog = getPostHogServer();
+  posthog.capture(event);
+  after(() => posthog.flush());
+}
+{{else}}
+/** Captures a server-side event and waits until PostHog has received it (safe on serverless hosts). */
+export async function captureServerEvent(event: EventMessage): Promise<void> {
+  await getPostHogServer().captureImmediate(event);
+}
+{{/if}}

@@ -1,0 +1,110 @@
+## Workflow
+
+{{#if isGated}}
+A phased process, one sub-phase at a time, with an independent review before every merge ([ADR 0001](docs/decisions/0001-product-development-workflow.md)). Durable context lives in the repo, not in a conversation, because every session starts fresh.
+{{else}}
+A light phased process, one sub-phase at a time, set for speed to the MVP ([ADR 0001](docs/decisions/0001-product-development-workflow.md)). Durable context lives in the repo, not in a conversation, because every session starts fresh.
+{{/if}}
+
+### Documentation layout
+```
+docs/
+├─ research/
+│  ├─ README.md                        # reading order
+│  └─ RESEARCH_*.md                    # the "why" and the chosen architecture; stable
+├─ spikes/
+│  ├─ README.md                        # index + format
+│  ├─ SPIKE_TEMPLATE.md                # copy this to start a spike
+│  ├─ SPIKE-NNN-<slug>.md              # spike spec: hypotheses, time box, $ budget, then measured results
+│  └─ SPIKE-NNN-<slug>/                # the spike's throwaway prototype; ported, never merged
+├─ phases/
+│  ├─ SPEC_MASTER_CHECKLIST.md         # brief index of every phase + status. "Where are we."
+│  ├─ SPEC_TEMPLATE.md                 # copy this to start a sub-phase spec
+│  ├─ phase-N/
+│  │  ├─ README.md                     # sub-phase map + why that order
+│  │  └─ SPEC_PHASE_N<x>_<NAME>.md     # spec for ONE sub-phase (e.g. SPEC_PHASE_0A_REPO_FOUNDATIONS.md)
+│  └─ phase-production/
+│     └─ SPEC_PRODUCTION_READINESS.md  # living log: what the deploy must set up and test
+├─ decisions/
+│  ├─ README.md                        # index
+│  ├─ ADR_TEMPLATE.md                  # copy this to start an ADR
+│  └─ NNNN-<slug>.md                   # one decision each; append-only once Accepted
+├─ reviews/
+│  ├─ README.md                        # naming, what a review holds, index (newest first)
+│  └─ REVIEW_<KIND>_<PHASE>_<DATE>.md  # one per review run; append-only
+├─ guides/
+│  └─ GUIDE_<NAME>.md                  # durable how-tos: local setup, provider setup, restore, launch preflight
+└─ handoffs/
+   ├─ README.md                        # index, newest first
+   └─ HANDOFF_PHASE_<PHASE>_<SLUG>.md  # end-of-session state
+```
+- **research/** holds the reasoning and the chosen architecture. Update it when a decision changes it.
+- **spikes/** is what we tried and measured before building. Read-only history: cite it, don't extend it.
+- **phases/** is the executable plan. `SPEC_MASTER_CHECKLIST.md` is the top-level map. When a spec defers something to the deploy, add a row to `phase-production/SPEC_PRODUCTION_READINESS.md` in the same commit.
+- **decisions/** is the log of real decisions (ADRs).
+- **reviews/** is the output of every review, append-only. Deferred findings and the watch list are inputs to the next spec: read them before speccing.
+- **guides/** holds how-tos not tied to one phase. `GUIDE_` is a filename namespace; the H1 stays a human title.
+- **handoffs/** let a fresh session (maybe another model) resume without the conversation. They're derived from the repo, not memory.
+
+### Spikes (before building anything uncertain)
+
+A spike answers a question a spec can't answer on paper: a UX flow, a data source's real behavior, a cost, a library.
+
+1. **Spec first:** copy `docs/spikes/SPIKE_TEMPLATE.md` to `docs/spikes/SPIKE-NNN-<slug>.md`: what it informs, the goal, **hypotheses with pass bars**, out of scope, and a **time box and $ budget** the founder approves.
+2. **Build the prototype** in `docs/spikes/SPIKE-NNN-<slug>/`. It's throwaway and never merged; what it proves is *ported*, with tests. Record every paid call and its cost.
+3. **Record results** in the same file: each hypothesis's outcome, measured numbers, spend against budget, surprises, and **what changes for the plan**, linking the ADRs or research it updates.
+
+### The phase workflow (one sub-phase at a time)
+
+Phases in the master checklist are large; each splits into **sub-phases** (0a, 0b, …), and each sub-phase gets its own focused spec. **Don't spec ahead:** earlier sub-phases routinely invalidate assumptions in later ones, so speccing ahead means rewriting specs.
+
+{{#if isGated}}
+1. **MAP:** when a phase starts, write `docs/phases/phase-N/README.md`: the sub-phase breakdown, the focus of each, and *why* that order. Only the first sub-phase gets a real spec; the rest are named placeholders.
+2. **PLAN:** copy `docs/phases/SPEC_TEMPLATE.md` to `docs/phases/phase-N/SPEC_PHASE_N<x>_<NAME>.md` for the **current sub-phase only**, grounded in the research, spikes and the previous reviews' watch list. Fill the sections that apply (listed in the template): scope and what's out, schema changes, the agent surface, the cost and latency budget, the query budget, copy, registries, a testing plan with named invariants, risks and an exit checklist.
+3. **IMPLEMENT:** build against the spec. If a real architectural decision comes up mid-build, write an ADR rather than burying it in code or chat.
+4. **REVIEW & MEASURE (the gate):** `{{{pm.run}}} check` is green, then run the reviews{{#if hasSkills}} (`backend-review` and `security-review` every time, `frontend-review` for UI changes, `docs-review` every time, before merging){{else}} (backend and security every time, frontend for UI changes, docs every time, before merging; `docs/reviews/README.md` says what a review holds){{/if}}, each written to `docs/reviews/`. Reviews are done by an independent reviewer (a fresh context) that must reproduce every finding; the author re-verifies before fixing. Check the spec's budgets (cost, latency, queries, bundle size) against what was measured. **Pass:** every finding fixed or deferred with the trigger that brings it back, and every budget met or its breach accepted in writing with the reason.
+5. **UPDATE:** tick the spec's exit checklist, update the phase README and `SPEC_MASTER_CHECKLIST.md`, and record ADRs. The Status section of `{{docFile}}` stays a few lines (it loads into every session): change only what's current.
+6. **REPEAT:** *then* spec the next sub-phase, informed by what this one taught us, including the reviews' watch list.
+{{else}}
+1. **Map:** when a phase starts, name its sub-phases in `SPEC_MASTER_CHECKLIST.md`, or in `docs/phases/phase-N/README.md` if it's big. Only the current sub-phase gets a real spec.
+2. **Spec:** copy `docs/phases/SPEC_TEMPLATE.md` to `docs/phases/phase-N/SPEC_PHASE_N<x>_<NAME>.md`, about a page, and fill the sections that apply (listed in the template): scope and what's out, schema changes, the agent surface, the cost and latency budget, the query budget, copy, registries and an exit checklist. Read the latest reviews' watch list first.
+3. **Build:** tests for the invariants that matter (access, the write path, idempotency, money), not coverage for its own sake. If a real architectural decision comes up, write an ADR; don't bury it in code or chat.
+4. **Done:** the exit checklist is ticked, the docs it changes are updated, and `{{{pm.run}}} check` is green. Tick the sub-phase in `SPEC_MASTER_CHECKLIST.md` and move on. The Status section of `{{docFile}}` stays a few lines: change only what's current.
+
+**Reviews:** no formal gates before the MVP. Run reviews on demand, at the end of a phase or when asked{{#if hasSkills}} (the skills below){{/if}}, and a security review before anything is deployed. Before calling a sub-phase done, do a quick self-check against the conventions below. Revisit heavier gates (an independent review on every sub-phase) after the MVP.
+{{/if}}
+
+**Sizing:** a sub-phase is **reviewable in one sitting** and ships on one branch (`phase-N<x>-<slug>`). If a spec needs more than a handful of tasks or spans unrelated concerns, split it. Keep `SPEC_MASTER_CHECKLIST.md` brief (index + status).
+
+**Plans carry no dates.** Phases and specs describe scope and order only. Don't add timelines unless asked.
+
+**Handoffs:** if a session ends with work in flight, {{#if hasSkills}}run the `handoff` skill{{else}}write `docs/handoffs/HANDOFF_PHASE_<PHASE>_<SLUG>.md` (the format is in `docs/handoffs/README.md`) and add it to the index{{/if}}. At the start of a session, read the latest handoff, the master checklist and the current spec.
+
+### ADRs (Architecture Decision Records)
+
+Write one for a real decision: a tech choice, a boundary, a tradeoff or a reversal.
+1. Copy `docs/decisions/ADR_TEMPLATE.md` to `docs/decisions/NNNN-<slug>.md` (the next zero-padded number) and fill in Context, Decision, Consequences and Options considered.
+2. Set its status: `Proposed`, then `Accepted`.
+3. Add it to `docs/decisions/README.md` and link it from the spec or spike that raised it.
+
+ADRs are **append-only history**: never rewrite an accepted one. Supersede it with a new ADR, changing only the old one's status line (`Superseded by NNNN`).
+
+### Git and sessions
+
+- `main` is the trunk. Each sub-phase gets its own branch (`phase-N<x>-<slug>`), merged when its {{#if isGated}}gate passes{{else}}`check` is green{{/if}}.
+- Agents commit and push only when asked, and never force-push `main`.
+- **Parallel sessions:** two agents never share one checkout. The second works in its own `git worktree` on its own branch, and each stages only its own files.
+- `README.md` is the repo's front page for people. `{{docFile}}` is the operating manual for agents and people.
+{{#if hasSkills}}
+
+### Skills (`.claude/skills/`)
+
+| Skill | What it does | When |
+|---|---|---|
+| `handoff` | End-of-session state from the repo → `docs/handoffs/HANDOFF_*` | A session ends with work in flight |
+{{#each reviewSkills}}
+| `{{this.id}}` | {{{this.what}}} → `docs/reviews/REVIEW_*` | {{{this.when}}} |
+{{/each}}
+
+Each review writes `docs/reviews/REVIEW_<KIND>_<PHASE>_<DATE>.md`, and adds a checklist line to its own skill for every class of mistake it catches, so the skills improve with use. Add skills for this project's own jobs as they appear (`ux-review`, `design-review`, `agent-review`).
+{{/if}}

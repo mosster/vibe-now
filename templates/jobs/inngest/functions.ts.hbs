@@ -1,0 +1,17 @@
+import { inngest, userSignedUp } from './client';
+
+// Example function. Each step.run() is retried independently and memoized across retries.
+export const sendWelcomeEmail = inngest.createFunction(
+  { id: 'send-welcome-email', triggers: [userSignedUp] },
+  async ({ event, step }) => {
+    const message = await step.run('compose-email', () => `Welcome aboard, ${event.data.email}!`);
+    await step.sleep('wait-a-moment', '1s');
+    await step.run('send-email', () => {
+      console.log(`[inngest] to ${event.data.email}: ${message}`);
+    });
+    return { userId: event.data.userId, sent: true };
+  },
+);
+
+/** Every function served at /api/inngest. Add new functions here. */
+export const functions = [sendWelcomeEmail];

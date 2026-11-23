@@ -1,0 +1,28 @@
+import { Context, Effect, Layer, Schema } from 'effect';
+
+/**
+ * Example service. Copy this shape for real ones (database, email, payments, ...):
+ * a typed error, a `Context.Service` describing what the service can do, and a
+ * `layer` that implements it. Register every layer in `./runtime.ts`.
+ */
+
+export class InvalidName extends Schema.TaggedError<InvalidName>()('InvalidName', {
+  name: Schema.String,
+}) {}
+
+export class Greeter extends Context.Service<
+  Greeter,
+  {
+    readonly greet: (name: string) => Effect.Effect<string, InvalidName>;
+  }
+>()('app/Greeter') {
+  static readonly layer = Layer.succeed(Greeter, {
+    greet: Effect.fn('Greeter.greet')(function* (name: string) {
+      const trimmed = name.trim();
+      if (trimmed.length === 0) {
+        return yield* new InvalidName({ name });
+      }
+      return `Hello, ${trimmed}!`;
+    }),
+  });
+}

@@ -1,0 +1,39 @@
+import { Effect, Layer, ManagedRuntime } from 'effect';
+import { Greeter } from './greeter';
+
+/** Every service the app's effects can use. Add new service layers here. */
+export const AppLayer = Layer.mergeAll(Greeter.layer);
+
+/** Shared runtime for server code. Layers are built once and reused across requests. */
+export const runtime = ManagedRuntime.make(AppLayer);
+
+/**
+ * Run an effect at the app boundary and get a plain Promise back.
+ * Keep `Effect` values inside your services; convert to a Promise only here.
+ *
+{{#if isTanStack}}
+ * @example In a TanStack Start server function:
+ *   export const greet = createServerFn({ method: 'POST' })
+ *     .validator((name: string) => name)
+ *     .handler(({ data }) => runEffect(Greeter.use((g) => g.greet(data))));
+{{else}}
+ * @example In a Server Action or Route Handler:
+ *   'use server';
+ *   export async function greet(name: string) {
+ *     return runEffect(Greeter.use((g) => g.greet(name)));
+ *   }
+{{/if}}
+ *
+ * Typed failures are turned into a value here so callers can show them;
+ * defects (bugs, thrown exceptions) still reject the Promise.
+ */
+export function runEffect<A, E extends { readonly _tag: string }>(
+  effect: Effect.Effect<A, E, Layer.Success<typeof AppLayer>>,
+): Promise<{ ok: true; value: A } | { ok: false; error: E['_tag'] }> {
+  return runtime.runPromise(
+    effect.pipe(
+      Effect.map((value) => ({ ok: true as const, value })),
+      Effect.catch((error) => Effect.succeed({ ok: false as const, error: error._tag })),
+    ),
+  );
+}

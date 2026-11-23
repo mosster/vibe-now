@@ -1,0 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { handleMCP } from '@/server/mcp/handler';
+
+// MCP Streamable HTTP endpoint (stateless). GET/DELETE answer 405, as the spec allows.
+export const Route = createFileRoute('/api/mcp')({
+  server: {
+    handlers: {
+      GET: ({ request }) => handleMCP(request),
+      POST: ({ request }) => handleMCP(request),
+      DELETE: ({ request }) => handleMCP(request),
+    },
+  },
+});

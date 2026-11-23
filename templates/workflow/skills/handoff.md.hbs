@@ -1,0 +1,48 @@
+---
+name: handoff
+description: Write an end-of-session handoff so the next session (fresh context, possibly another model) can resume without the conversation. Derived from the repo (git log, specs, spikes, checklists, reviews), not memory. Use when the user says handoff, wrap up, end of session, pausing, or before a context reset with work in flight.
+---
+
+# Handoff
+
+Arg: a short slug (e.g. `repo-foundations`). The phase comes from the branch (`phase-0a-…` → `0A`); before Phase 0 starts, use `PRE0`.
+
+## Steps
+
+1. **Gather from the repo, not memory:**
+   - `git status`, `git branch --show-current`, `git log main..HEAD --oneline` (or the last ~10 commits on `main`), and uncommitted diffs (`git diff --stat`);
+   - the current spec and its exit checklist (ticked vs not), or the current spike and its spend against budget;
+   - `docs/phases/SPEC_MASTER_CHECKLIST.md`;
+   - Proposed ADRs waiting on a decision (`docs/decisions/README.md`);
+   - the latest reviews for the phase and their watch list (`docs/reviews/README.md`);
+   - the last `{{{pm.run}}} check` result (run it if it's cheap).
+2. **Write** `docs/handoffs/HANDOFF_PHASE_<PHASE>_<SLUG>.md`:
+
+```markdown
+# Handoff: <sub-phase> · <slug> · <date>
+
+## Where we are
+Branch, last commit, sub-phase or spike, exit checklist: N of M done.
+
+## Done this session
+- … (commit shas)
+
+## In flight / half-done
+- … (files, what's left, what state they're in)
+
+## Decisions and open questions
+- ADRs written or accepted; questions waiting on the founder
+
+## Traps and warnings
+- things that look done but aren't, flaky tests, env quirks, services that must be running, paid calls still pending
+
+## Next steps
+1. …
+2. …
+
+## Read first
+- spec or spike, ADRs, reviews, key files
+```
+
+3. **Index:** add a row to the top of the table in `docs/handoffs/README.md`.
+4. **Commit** the handoff on the current branch only if the user asked you to commit; otherwise leave it staged-ready and say so.

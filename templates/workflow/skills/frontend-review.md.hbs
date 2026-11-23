@@ -1,0 +1,68 @@
+---
+name: frontend-review
+description: Frontend review of {{projectName}}'s UI ({{#if isNextjs}}app/ routes{{else}}src/routes{{/if}}, components{{#if hasShadcn}}, shadcn/ui usage{{/if}}, copy) in a real browser (the Chrome DevTools MCP), at desktop and phone width, light and dark (screenshots, console, overflow, keyboard, the accessibility tree). An independent reviewer reports verified findings; fixes are re-checked in the browser and a REVIEW_FRONTEND file is written. Use {{#if isGated}}at the gate of every sub-phase with UI changes{{else}}at the end of a phase or sub-phase with UI changes{{/if}}, or when asked for a frontend or UI review.
+---
+
+# Frontend review
+
+Arg: the phase or sub-phase (e.g. `0`, `0a`).
+
+**Why it's built this way:** a browser pass finds bugs no test sees: raw enum values shown as labels, a breadcrumb naming the wrong thing, an empty state on a finished record, internal jargon in copy, a card title that isn't a heading. Every frontend review looks at the running app, not only the code.
+
+## 1. Scope
+
+- The specs' page lists, Copy sections and exit items.
+- **Code:** {{#if isNextjs}}`app/**`, `components/**`, `lib/**`{{else}}`src/routes/**`, `src/components/**`, `src/lib/**`{{/if}}, and the global stylesheet.
+{{#if hasShadcn}}
+- **Out of scope:** shadcn's generated files in `components/ui`, unless the app uses one wrongly.
+{{/if}}
+
+## 2. Run it in a browser
+
+1. **Start the app:** `{{{pm.run}}} dev`.
+2. **Sign in as a person would,** in an isolated browser context (if a sign-in blocks you, stop and say so; never read `.env` files or mint a session). Make any data you need through the product, never by inserting rows by hand, and never with a live paid call.
+3. **Use the Chrome DevTools MCP.** For each route the scope touches, at **1280×800 light** and **390×844 dark**:
+   - take screenshots and look at them; after a hot reload, load the page fresh first, because screenshots can lag;
+   - read the console (hydration and React key warnings are bugs);
+   - measure horizontal overflow: `document.documentElement.scrollWidth - innerWidth` must be 0 (on a phone, compare with `visualViewport.width`);
+   - read the accessibility tree: one `h1`, labels on inputs, named buttons;
+   - exercise the states: loading, empty, one, many, an unknown id (the same Not found page for a missing record and someone else's), signed out, an error.
+4. **Keyboard:** every action reachable with Tab, Enter and Escape, with focus visible.
+
+## 3. Independent review (subagent)
+
+Give a fresh general-purpose subagent the specs, the screenshots and the browser findings, with this checklist. It must not modify repo files. Every finding needs file:line and a reproduction (route, viewport, theme, steps); label unreproduced ones PLAUSIBLE.
+
+### Checklist
+
+{{#if hasShadcn}}
+- **shadcn, one way:**
+  - every primitive comes from `components/ui`, kept close to upstream; the app's compositions (a status badge, page header, stat card, empty state) live in `components/` and are built from those parts;
+  - a second hand-made copy of a button, badge, card, table, empty state or tooltip is a finding;
+  - known traps: `CardTitle` is a `div`, so a page title needs a real heading; a link styled as a button uses `buttonVariants`.
+{{/if}}
+- **Tokens:** colors only from the theme's tokens, never raw values; each status color means one thing; status text measured at AA contrast (4.5:1) on its own badge in both themes.
+- **User-provided text:** rendered as text, never HTML; long names truncate with a `title`; long bodies clamp with a way to expand; right-to-left text and emoji don't break the row.
+- **States:**
+  - empty states say what will appear and how to make it happen, and stay true when filtered;
+  - errors show our own messages, never "Failed to fetch";
+  - an error inside a page keeps the layout's frame (test by failing the network during a client-side navigation).
+- **URL state:** every search param is validated with a default, so a hand-edited URL shows the default instead of an error; a filter's Apply keeps the rest of the address.
+- **Layout:** no page scrolls sideways at 390 px; tables scroll inside their frame; `min-w-0` on flex children with text.
+- **Accessibility:** one `h1` per page in every state (Not found, error, empty), headings in order; every input labeled; icon-only buttons named; focus visible; status messages in a live region.
+- **Data flow:** no `useEffect` fetching; {{#if isNextjs}}no server-only module imported into a client component{{else}}no server-only module imported into client code{{/if}}; one request per change.
+- **React and SSR:** stable keys; nothing reading `window` or `document` during render; times formatted with an explicit time zone; no hydration mismatch.
+- **Copy:** American English, plain words, one next step per view; no internal jargon (phase numbers, ADRs, table names); statuses read as sentences ("Waiting for approval", not `waiting_approval`); the same thing named the same way on every page.
+- **Forms:** submit handlers use try/finally; focus moves somewhere meaningful when a control disables or unmounts itself; Enter submits a dialog's form.
+
+## 4. Verify, fix, record
+
+Same as `backend-review` §3:
+- re-verify each finding
+- fix clear ones, then **re-check in the browser** with a fresh load and screenshot
+- record deferred items with a trigger and accepted ones with a reason
+- `{{{pm.run}}} check` green
+
+Write `docs/reviews/REVIEW_FRONTEND_<PHASE>_<YYYY-MM-DD>.md` with the same format plus a "Screens checked" list (route × viewport × theme), and add it to the top of `docs/reviews/README.md`.
+
+**Codify:** when a finding is a class of mistake a checklist line would have caught (a component trap, a copy rule), add that line here.

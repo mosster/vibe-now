@@ -1,0 +1,10 @@
+# Production readiness
+
+A living log of everything the first deploy must set up, test or confirm. When a spec or review defers something to the deploy, add its row here **in the same commit**, so nothing deferred is forgotten.
+
+| # | Area | What the deploy must do | Raised by | Status |
+|---|---|---|---|---|
+| P1 | Env | Every key in `.env.example` set in production, secrets in the host's secret store | Scaffold | Open |
+| P2 | Backups | Backups configured and a restore tested (a `GUIDE_RESTORE.md` in `docs/guides/`) | Scaffold | Open |
+
+Status values: `Open` · `Done` · `Dropped` (with the reason).
