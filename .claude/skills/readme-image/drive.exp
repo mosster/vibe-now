@@ -1,0 +1,72 @@
+#!/usr/bin/expect -f
+# Drives the real vibe-now wizard in a pseudo-terminal and echoes its raw output (ANSI codes
+# included) to stdout; progress goes to stderr. Redirect stdout to a file for extract.mjs.
+# env: WORKDIR  empty directory to scaffold into
+#      NAME     project name to type
+#      UA       npm_config_user_agent, picks the default package manager (e.g. "pnpm/11.0.0 npm/? node/v22")
+#      LISTS    "substring=moves;..."  list prompts: arrow presses from the default (negative = up)
+#      CONFIRMS "substring=y|n;..."    confirm prompts; unmatched ones take the default
+set timeout 900
+log_user 1
+cd $env(WORKDIR)
+set cli [file normalize [file join [file dirname [info script]] .. .. .. index.js]]
+
+proc parse {spec} {
+  set d [dict create]
+  foreach pair [split $spec ";"] {
+    if {$pair eq ""} continue
+    set i [string first "=" $pair]
+    dict set d [string range $pair 0 [expr {$i - 1}]] [string range $pair [expr {$i + 1}] end]
+  }
+  return $d
+}
+set lists [parse $env(LISTS)]
+set confirms [parse $env(CONFIRMS)]
+set answered [dict create]
+
+# Inquirer redraws a prompt while it's answered; key each prompt by its plain text so it's answered once.
+proc norm {raw} {
+  regsub -all {\x1b?\[[0-9;?]*[A-Za-z]} $raw "" clean
+  regsub {^[^A-Z]*} $clean "" clean
+  return [string trim $clean]
+}
+
+spawn env npm_config_user_agent=$env(UA) node $cli
+stty rows 50 columns 250 < $spawn_out(slave,name)
+set ::down "\033\[B"
+
+expect {
+  -re {project name\?[^\n]*\(my-vibe-now\)} {
+    send "$env(NAME)\r"; exp_continue
+  }
+  -re {([A-Za-z][^\n?]*?)(\x1b\[[0-9;]*m|\s|:)*\(Use arrow keys\)} {
+    set msg [norm $expect_out(1,string)]
+    if {[dict exists $answered $msg]} { exp_continue }
+    dict set answered $msg 1
+    set moves 0
+    dict for {key n} $lists { if {[string first $key $msg] >= 0} { set moves $n } }
+    set arrow [expr {$moves < 0 ? "\033\[A" : $::down}]
+    for {set i 0} {$i < abs($moves)} {incr i} { send $arrow; sleep 0.15 }
+    sleep 0.2; send "\r"
+    puts stderr "LIST  $msg -> down $moves"
+    exp_continue
+  }
+  -re {([A-Za-z][^\n]*?)(\x1b\[[0-9;]*m|\s)*\((Y/n|y/N)\)} {
+    set msg [norm $expect_out(1,string)]
+    if {[dict exists $answered $msg]} { exp_continue }
+    dict set answered $msg 1
+    set key "\r"
+    dict for {k v} $confirms { if {[string first $k $msg] >= 0} { set key "$v\r" } }
+    send $key
+    puts stderr "CONFIRM $msg -> [string trim $key]"
+    exp_continue
+  }
+  -re {Would you like to use TypeScript} {
+    sleep 0.3; send "\r"; puts stderr "SUBPROMPT shadcn TypeScript -> default"; exp_continue
+  }
+  -re {Next steps:} { puts stderr "DONE: reached Next steps"; exp_continue }
+  eof { puts stderr "EOF" }
+  timeout { puts stderr "TIMEOUT"; exit 2 }
+}
+catch wait result
+puts stderr "EXIT [lindex $result 3]"
