@@ -1,0 +1,24 @@
+// Background job worker. Run as its own process: `{{{pm.run}}} worker` (keep it running next to the app).
+import { startWorker } from '@/server/jobs';
+
+async function main() {
+  const worker = await startWorker();
+  console.log('[worker] ready, waiting for jobs');
+
+  let stopping = false;
+  const shutdown = async (signal: NodeJS.Signals) => {
+    if (stopping) return;
+    stopping = true;
+    console.log(`[worker] ${signal} received, finishing active jobs...`);
+    await worker.stop();
+    console.log('[worker] stopped');
+    process.exit(0);
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+}
+
+main().catch((error) => {
+  console.error('[worker] failed to start', error);
+  process.exit(1);
+});

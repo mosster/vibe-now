@@ -1,0 +1,7 @@
+import { generateReactHelpers, generateUploadButton, generateUploadDropzone } from '@uploadthing/react';
+import type { UploadRouter } from '@/server/uploadthing';
+
+// Typed against the server's file router. Render these only from client components.
+export const UploadButton = generateUploadButton<UploadRouter>();
+export const UploadDropzone = generateUploadDropzone<UploadRouter>();
+export const { useUploadThing, uploadFiles } = generateReactHelpers<UploadRouter>();

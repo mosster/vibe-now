@@ -1,0 +1,207 @@
+{
+  "title": "vibe-now — ~/code/my-app",
+  "cwd": "~/code",
+  "command": "pnpm dlx vibe-now",
+  "lines": [
+    {
+      "kind": "q",
+      "msg": "What is your project name?",
+      "answer": "my-app"
+    },
+    {
+      "kind": "q",
+      "msg": "Choose your framework:",
+      "answer": "Next.js (App Router, stable)"
+    },
+    {
+      "kind": "q",
+      "msg": "Choose your package manager:",
+      "answer": "pnpm (11.17.0)"
+    },
+    {
+      "kind": "q",
+      "msg": "Is this a Claude Code project? (generates CLAUDE.md instead of AGENTS.md)",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "Development workflow (specs, ADRs, reviews, handoffs):",
+      "answer": "Phased, light (reviews on demand, speed to MVP)"
+    },
+    {
+      "kind": "q",
+      "msg": "State Management: Include Zustand?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "Validation: Include Zod?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "Effect System: Include Effect (effect-ts v4)?",
+      "answer": "No"
+    },
+    {
+      "kind": "q",
+      "msg": "Data Fetching: Include TanStack React Query?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "UI & Components: Include shadcn/ui?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "UI & Components: Include next-themes (Dark Mode)?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "UI & Components: Include Motion (motion.dev, formerly Framer Motion)?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "Authentication: Include Better Auth?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "Database (Select One):",
+      "answer": "Postgres + Drizzle ORM (any host: local Docker, Neon, Railway, RDS, ...)"
+    },
+    {
+      "kind": "q",
+      "msg": "API Layer (Select One):",
+      "answer": "oRPC (type-safe RPC + OpenAPI spec & docs)"
+    },
+    {
+      "kind": "q",
+      "msg": "Agent Surface: Include MCP server (/api/mcp)?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "Email: Include Resend?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "Payments (Select One):",
+      "answer": "Stripe (Server + Client SDKs)"
+    },
+    {
+      "kind": "q",
+      "msg": "AI SDK: Include Vercel AI SDK?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "AI SDK: Include OpenRouter AI SDK Provider?",
+      "answer": "No"
+    },
+    {
+      "kind": "q",
+      "msg": "Background Jobs (Select One):",
+      "answer": "pg-boss (queue in your Postgres, separate worker process)"
+    },
+    {
+      "kind": "q",
+      "msg": "File Uploads (Select One):",
+      "answer": "Cloudflare R2 (S3 API, direct browser uploads)"
+    },
+    {
+      "kind": "q",
+      "msg": "Analytics & Monitoring: Include PostHog (product analytics)?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "Analytics & Monitoring: Include Sentry (error tracking)?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "Linting & Formatting:",
+      "answer": "ESLint + Prettier (Standard)"
+    },
+    {
+      "kind": "q",
+      "msg": "Testing (Select One):",
+      "answer": "Vitest + React Testing Library (Unit/Component)"
+    },
+    {
+      "kind": "q",
+      "msg": "UI Helpers: Include nuqs?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "UI Helpers: Include React Hook Form?",
+      "answer": "Yes"
+    },
+    {
+      "kind": "q",
+      "msg": "UI Helpers: Include Day.js?",
+      "answer": "No"
+    },
+    {
+      "kind": "q",
+      "msg": "UI Helpers: Include Lodash?",
+      "answer": "No"
+    },
+    {
+      "kind": "blank"
+    },
+    {
+      "kind": "ok",
+      "text": "Base Next.js app created!"
+    },
+    {
+      "kind": "ok",
+      "text": "Packages installed successfully!"
+    },
+    {
+      "kind": "emoji",
+      "icon": "✨",
+      "text": "Finalizing shadcn/ui..."
+    },
+    {
+      "kind": "ok",
+      "text": "Starter files generated (45 files)"
+    },
+    {
+      "kind": "ok",
+      "text": "Documentation, CLAUDE.md, .env.example generated!"
+    },
+    {
+      "kind": "ok",
+      "text": "Project weight: 1.3G (node_modules)"
+    },
+    {
+      "kind": "blank"
+    },
+    {
+      "kind": "emoji",
+      "icon": "🌌",
+      "text": "Vibe Check: COMPLETE. Your stack is ready.",
+      "strong": true
+    },
+    {
+      "kind": "emoji",
+      "icon": "🚀",
+      "text": "Next steps:"
+    },
+    {
+      "kind": "plain",
+      "text": "   cd my-app"
+    },
+    {
+      "kind": "plain",
+      "text": "   pnpm dev"
+    }
+  ]
+}

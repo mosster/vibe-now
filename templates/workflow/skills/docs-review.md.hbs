@@ -1,0 +1,78 @@
+---
+name: docs-review
+description: Docs review of {{projectName}} - an independent reviewer checks that what we tell people and agents matches what the code does. That covers CLAUDE.md (status, commands, directory structure, skills), README.md, docs/guides, the master checklist, the ADR, review and handoff indexes, .env.example{{#if hasApi}}, and any API docs{{/if}}. It runs every documented command, checks each claim against the code, and writes a REVIEW_DOCS file. Use {{#if isGated}}at every sub-phase's gate, before merging{{else}}at the end of a phase or sub-phase that changes what people or agents can do{{/if}}, or when asked whether the docs are up to date.
+---
+
+# Docs review
+
+Arg: the phase or sub-phase (e.g. `0`, `0a`). The scope is what that phase added or changed.
+
+**Why it's built this way:** docs are a surface. The next session reads CLAUDE.md before touching anything; people copy the commands in the README and the guides. Prose drifts silently: a command table missing the new script, a status line that's weeks old, a guide describing a screen that changed, an env key nobody listed. The author reads their own docs as they meant them; a fresh reader runs them as written.
+
+## 1. Scope
+
+- **The specs:** `docs/phases/phase-N/SPEC_PHASE_N*.md`, their Copy sections and exit checklists. Every capability, command or env key a spec adds must be documented where a reader would look.
+- **Internal docs:**
+  - CLAUDE.md: Status (a few lines naming the current sub-phase; detail belongs in the master checklist), Commands, Directory Structure, Skills;
+  - README.md, `docs/guides/`, `docs/phases/SPEC_MASTER_CHECKLIST.md`, `docs/research/README.md`;
+  - the indexes in `docs/decisions/README.md`, `docs/reviews/README.md`, `docs/handoffs/README.md` and `docs/spikes/README.md`;
+  - `.env.example` (every key the code reads, with a comment).
+- **Earlier reviews:** `docs/reviews/REVIEW_DOCS_*`: deferred items whose trigger is now met.
+
+## 2. Automated checks (run first, record the output)
+
+- **Repo links:** every markdown link under `docs/`, in CLAUDE.md and in README.md that points at a repo file resolves (a short script; don't follow external URLs).
+- **Commands:** every script in `package.json` appears in CLAUDE.md's Commands, and every command there exists.
+- **Env:** every env key the code reads (search for the env module's keys and `process.env`) is in `.env.example`, and every key there is still read.
+
+## 3. Independent review (subagent)
+
+Launch a general-purpose subagent with a fresh context. It must not modify repo files. Brief it:
+
+- "Docs review of {{projectName}} <phase> in <repo path>. Read `.claude/skills/docs-review/SKILL.md` (this checklist), CLAUDE.md and the specs <paths>. Do NOT modify repo files."
+- "**Run every documented command** exactly as written (setup steps, scripts, examples). Report any that fails, or whose result differs from what the docs say. Never make a live paid call; use fixtures."
+- "**Check every claim against the code**, citing file:line for each mismatch: limits, defaults, prices, env keys, file paths, what exists and what's still to come. Nothing unbuilt may be described as if it works."
+- "**For each capability, command, env key or behavior the phase adds or changes:** is it documented where a person, an agent, or the next session would look? List what's missing."
+- "**Read the docs as a newcomer:** could a fresh session find where to start and what's in flight? Could a new developer get the app running from the README alone? Note stale status lines, wrong counts, dead links and contradictions between documents."
+- "**Copy:** American English, plain words, one clear next action."
+- "Report per finding: severity (high: a reader following the docs fails or is misled; medium: wrong or missing for a built capability; low: stale, unclear or inconsistent), file:line, what the docs say, what's true (with evidence), and a fix. Label anything unverified PLAUSIBLE."
+
+### Checklist
+
+- **Status is current and short:** CLAUDE.md's Status names the current sub-phase in a few lines; the master checklist matches it.
+- **Built versus coming:** every "coming" or "to write" note is still true, and nothing built is still marked coming.
+- **One source for a shown value:** a number, limit or command in prose comes from the code it describes; when it can drift, say where it's defined instead of repeating it.
+- **Indexes complete:** every ADR, review, handoff and spike file is in its README's table, newest first where that's the rule.
+- **ADRs:** no accepted ADR was rewritten; a superseded one changed only its status line.
+- **Guides describe the screens as they are:** tab names, menu choices and button labels match what the UI renders.
+
+## 4. Verify, fix, record
+
+1. **Re-verify each finding** (run the command, read the code) before fixing. Reject the ones that don't reproduce, and say so.
+2. **Fix the docs.** Where the docs are right and the code is wrong, that's a code finding: fix it with a test, or defer it with a trigger.
+3. `{{{pm.run}}} check` must be green.
+4. **Write** `docs/reviews/REVIEW_DOCS_<PHASE>_<YYYY-MM-DD>.md`:
+
+```markdown
+# Review: docs · <phase> · <date>
+
+- **Scope:** <docs checked>
+- **Method:** independent reviewer; every documented command run; claims checked against the code
+- **Verdict:** pass | pass with deferrals | fail
+
+## Automated checks
+## Commands run
+| Doc | Command | Result |
+|---|---|---|
+
+## Findings
+| # | Severity | Where | What the docs said → what's true (verified) | Outcome |
+|---|---|---|---|---|
+
+## Coverage
+<each capability, command or behavior in scope: where it's documented, or why it isn't yet>
+```
+
+5. **Add it** to the top of `docs/reviews/README.md`.
+
+**Codify:** when a finding is a class of mistake a checklist line would have caught, add the line here.

@@ -1,0 +1,4 @@
+import { handleMCP } from '@/server/mcp/handler';
+
+// MCP Streamable HTTP endpoint (stateless). GET/DELETE answer 405, as the spec allows.
+export { handleMCP as GET, handleMCP as POST, handleMCP as DELETE };

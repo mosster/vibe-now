@@ -1,0 +1,26 @@
+/**
+ * Browser helper: asks `/api/uploads` for a presigned URL, then PUTs the file straight to R2.
+ * Returns the object key (store this) and a URL to read the file.
+ */
+export async function uploadFile(file: File, options: { signal?: AbortSignal } = {}) {
+  const res = await fetch('/api/uploads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contentType: file.type, size: file.size }),
+    signal: options.signal,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error ?? `Upload rejected (${res.status})`);
+
+  const { key, uploadUrl, method, headers, fileUrl } = data as {
+    key: string;
+    uploadUrl: string;
+    method: 'PUT';
+    headers: Record<string, string>;
+    fileUrl: string;
+  };
+  const put = await fetch(uploadUrl, { method, headers, body: file, signal: options.signal });
+  if (!put.ok) throw new Error(`Upload to storage failed (${put.status})`);
+
+  return { key, url: fileUrl };
+}

@@ -1,0 +1,10 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { handleRPC } from '@/server/orpc/handlers';
+
+export const Route = createFileRoute('/api/rpc/$')({
+  server: {
+    handlers: {
+      ANY: ({ request }) => handleRPC(request),
+    },
+  },
+});

@@ -1,0 +1,64 @@
+// The only module that imports pg-boss. Server-only: never import it from client components.
+import { PgBoss, type SendOptions } from 'pg-boss';
+import type { z } from 'zod';
+import { jobs } from './registry';
+
+type AnyJob = (typeof jobs)[number];
+export type JobName = AnyJob['name'];
+export type JobInput<N extends JobName> = z.input<Extract<AnyJob, { name: N }>['schema']>;
+
+async function createBoss({ worker }: { worker: boolean }): Promise<PgBoss> {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error('DATABASE_URL is not set');
+
+  const boss = new PgBoss({
+    connectionString,
+    // Maintenance and cron scheduling run in the worker only; app processes just enqueue.
+    supervise: worker,
+    schedule: worker,
+  });
+  boss.on('error', (error) => console.error('[jobs]', error));
+  await boss.start(); // creates/migrates the `pgboss` schema on first run
+
+  // Queues must exist before send() / work(). createQueue is idempotent.
+  for (const job of jobs) await boss.createQueue(job.name);
+  return boss;
+}
+
+// One instance per app process (cached on globalThis so dev hot reloads don't leak pools).
+const globalForJobs = globalThis as unknown as { pgBoss?: Promise<PgBoss> };
+
+function getBoss(): Promise<PgBoss> {
+  globalForJobs.pgBoss ??= createBoss({ worker: false }).catch((error) => {
+    globalForJobs.pgBoss = undefined;
+    throw error;
+  });
+  return globalForJobs.pgBoss;
+}
+
+/** Enqueue a job from server code (Server Actions, route handlers, server functions). */
+export async function enqueue<N extends JobName>(
+  name: N,
+  data: JobInput<N>,
+  options: SendOptions = {},
+): Promise<string | null> {
+  const job = jobs.find((j) => j.name === name);
+  if (!job) throw new Error(`Unknown job: ${name}`);
+  const payload = job.schema.parse(data) as object; // fail fast in the caller, not in the worker
+  const boss = await getBoss();
+  return boss.send(name, payload, options);
+}
+
+/** Start processing every registered job. Used by the worker process only. */
+export async function startWorker() {
+  const boss = await createBoss({ worker: true });
+  for (const job of jobs) {
+    await boss.work(job.name, async (batch) => {
+      for (const { id, data } of batch) await job.run(data, { id });
+    });
+  }
+  return {
+    /** Stop fetching new jobs and wait (up to 30s) for active ones to finish. */
+    stop: () => boss.stop({ graceful: true, timeout: 30_000 }),
+  };
+}

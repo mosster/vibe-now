@@ -1,0 +1,33 @@
+{{#if isNextjs}}
+'use client';
+
+{{/if}}
+import { type ChangeEvent, useState } from 'react';
+import { uploadFile } from '@/lib/upload';
+
+export function FileUpload() {
+  const [status, setStatus] = useState<string | null>(null);
+  const [url, setUrl] = useState<string | null>(null);
+
+  async function onChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setStatus('Uploading...');
+    setUrl(null);
+    try {
+      const result = await uploadFile(file);
+      setUrl(result.url);
+      setStatus(`Uploaded ${result.key}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Upload failed');
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <input type="file" accept="image/*" onChange={onChange} />
+      {status && <p className="text-sm">{status}</p>}
+      {url && <a className="text-sm underline" href={url}>Open file</a>}
+    </div>
+  );
+}

@@ -1,0 +1,10 @@
+{{#if isNextjs}}
+'use client';
+
+{{/if}}
+import { createTRPCContext } from '@trpc/tanstack-react-query';
+import type { AppRouter } from '@/server/trpc/router';
+
+// Wrap your app in <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}> (inside QueryClientProvider),
+// then in components: `const trpc = useTRPC(); useQuery(trpc.hello.queryOptions({ name: 'vibe' }))`
+export const { TRPCProvider, useTRPC, useTRPCClient } = createTRPCContext<AppRouter>();

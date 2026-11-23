@@ -1,0 +1,15 @@
+import { os } from '@orpc/server';
+import * as z from 'zod';
+
+// Each procedure is callable over RPC (typed client) and REST (OpenAPI via `.route()`).
+export const hello = os
+  .route({ method: 'GET', path: '/hello', summary: 'Say hello' })
+  .input(z.object({ name: z.string().min(1).default('world') }))
+  .output(z.object({ message: z.string() }))
+  .handler(({ input }) => ({ message: `Hello, ${input.name}!` }));
+
+export const router = {
+  hello,
+};
+
+export type AppRouter = typeof router;

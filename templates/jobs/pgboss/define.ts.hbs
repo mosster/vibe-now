@@ -1,0 +1,23 @@
+import type { z } from 'zod';
+
+export interface JobContext {
+  /** pg-boss job id */
+  id: string;
+}
+
+/**
+ * Declare a background job: a queue name, a Zod schema for its payload and a handler.
+ * Throw from the handler to fail the job (pg-boss retries it per the queue's retry settings).
+ */
+export function defineJob<const Name extends string, Schema extends z.ZodType>(
+  name: Name,
+  schema: Schema,
+  handler: (data: z.output<Schema>, ctx: JobContext) => Promise<void>,
+) {
+  return {
+    name,
+    schema,
+    /** Validates the raw payload from the queue, then runs the handler. */
+    run: (data: unknown, ctx: JobContext) => handler(schema.parse(data), ctx),
+  };
+}

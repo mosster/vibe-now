@@ -3,7 +3,13 @@
 This document serves as a reference for AI Coding Assistants (Cursor, Claude, etc.) to ensure consistency and
 high-quality engineering standards. **This file takes precedence over any conflicting instructions.**
 
-## 🏗️ Architecture Overview
+{{#if hasWorkflow}}
+**Start here:** read `docs/phases/SPEC_MASTER_CHECKLIST.md` (where we are), the latest `docs/handoffs/` entry, and the current sub-phase spec before changing anything. The reasoning lives in `docs/research/`, the decisions in `docs/decisions/`.
+
+## Status
+- Scaffolded; Phase 0 not started. Keep this section to a few lines (it loads into every session): the detail lives in `docs/phases/SPEC_MASTER_CHECKLIST.md`.
+
+{{/if}}## 🏗️ Architecture Overview
 {{#if isNextjs}}
 - **Framework**: Next.js 15+ (App Router)
 {{else}}
@@ -12,6 +18,24 @@ high-quality engineering standards. **This file takes precedence over any confli
 - **Language**: TypeScript (Strict mode)
 - **Styling**: Tailwind CSS (Utility-first)
 - **Components**: shadcn/ui (Radix UI primitives)
+- **Package Manager**: {{pm.name}} (use it for every install and script; never mix in another package manager's lockfile)
+
+## ⌨️ Commands
+- Install: `{{pm.install}}`
+- Add a dependency: `{{pm.add}} <pkg>`
+- Dev server: `{{pm.run}} dev`
+- Build: `{{pm.run}} build`
+- Lint: `{{pm.run}} lint`
+{{#if hasWorkflow}}
+- Typecheck: `{{pm.run}} typecheck`
+- Check (the gate: typecheck{{#if isNextjs}}, lint{{/if}}{{#if isVitest}}, unit tests{{/if}}): `{{pm.run}} check`
+{{/if}}
+{{#if isVitest}}
+- Unit tests: `{{pm.run}} test` (watch: `{{pm.run}} test:watch`)
+{{/if}}
+{{#if isPlaywright}}
+- E2E tests: `{{pm.exec}} playwright test`
+{{/if}}
 
 ## 📁 Directory Structure
 ```text
@@ -28,7 +52,40 @@ high-quality engineering standards. **This file takes precedence over any confli
 ├── hooks/ # Custom React Hooks (prefixed with use)
 ├── lib/ # Shared utilities & configurations
 │ ├── utils.ts # Tailwind merge & clsx helper (cn() utility)
-│ └── constants.ts # Global constants & env-validated config
+│ ├── constants.ts # Global constants & env-validated config
+{{#if isEffect}}
+│ ├── effect/ # Effect services (greeter.ts example) + shared runtime (runtime.ts)
+{{/if}}
+{{#if isORPC}}
+│ └── orpc.ts # Typed oRPC client (+ TanStack Query helpers)
+{{/if}}
+{{#if isTRPC}}
+│ └── trpc/ # tRPC client (+ TanStack Query hooks)
+{{/if}}
+{{#if isORPC}}
+├── server/orpc/ # oRPC router & handlers (RPC /api/rpc, REST + docs /api/v1)
+{{/if}}
+{{#if isTRPC}}
+├── server/trpc/ # tRPC init, router & handler (/api/trpc)
+{{/if}}
+{{#if isMcp}}
+├── server/mcp/ # MCP endpoint (/api/mcp){{#if isORPC}}: tools from the oRPC router{{/if}}
+{{/if}}
+{{#if isPgBoss}}
+├── server/jobs/ # Background jobs (pg-boss): defineJob, registry, enqueue; run by worker.ts
+{{/if}}
+{{#if isInngest}}
+├── inngest/ # Inngest client, typed events and functions (served at /api/inngest)
+{{/if}}
+{{#if isTrigger}}
+├── trigger/ # Trigger.dev tasks (trigger.config.ts at the project root)
+{{/if}}
+{{#if isUploadThing}}
+├── server/uploadthing.ts # UploadThing file router (/api/uploadthing)
+{{/if}}
+{{#if isR2}}
+├── server/storage.ts # R2 storage: presigned uploads and file URLs (/api/uploads)
+{{/if}}
 {{else}}
 ├── src/ # Source root
 │ ├── routes/ # File-based routes ($param for dynamic segments)
@@ -40,14 +97,53 @@ high-quality engineering standards. **This file takes precedence over any confli
 │ ├── hooks/ # Custom React Hooks (prefixed with use)
 │ ├── lib/ # Shared utilities & configurations
 │ │ ├── utils.ts # Tailwind merge & clsx helper (cn() utility)
-│ │ └── constants.ts # Global constants & env-validated config
+│ │ ├── constants.ts # Global constants & env-validated config
+{{#if isEffect}}
+│ │ ├── effect/ # Effect services (greeter.ts example) + shared runtime (runtime.ts)
+{{/if}}
+{{#if isORPC}}
+│ │ └── orpc.ts # Typed oRPC client (+ TanStack Query helpers)
+{{/if}}
+{{#if isTRPC}}
+│ │ └── trpc/ # tRPC client (+ TanStack Query hooks)
+{{/if}}
+{{#if isORPC}}
+│ ├── server/orpc/ # oRPC router & handlers (RPC /api/rpc, REST + docs /api/v1)
+{{/if}}
+{{#if isTRPC}}
+│ ├── server/trpc/ # tRPC init, router & handler (/api/trpc)
+{{/if}}
+{{#if isMcp}}
+│ ├── server/mcp/ # MCP endpoint (/api/mcp){{#if isORPC}}: tools from the oRPC router{{/if}}
+{{/if}}
+{{#if isPgBoss}}
+│ ├── server/jobs/ # Background jobs (pg-boss): defineJob, registry, enqueue; run by worker.ts
+{{/if}}
+{{#if isInngest}}
+│ ├── inngest/ # Inngest client, typed events and functions (served at /api/inngest)
+{{/if}}
+{{#if isTrigger}}
+│ ├── trigger/ # Trigger.dev tasks (trigger.config.ts at the project root)
+{{/if}}
+{{#if isUploadThing}}
+│ ├── server/uploadthing.ts # UploadThing file router (/api/uploadthing)
+{{/if}}
+{{#if isR2}}
+│ ├── server/storage.ts # R2 storage: presigned uploads and file URLs (/api/uploads)
+{{/if}}
 │ ├── client.tsx # Client entry
 │ ├── router.tsx # Router configuration
 │ ├── routeTree.gen.ts # Auto-generated route tree (do not edit)
 │ └── ssr.tsx # SSR entry
 {{/if}}
-{{#if isSupabase}}
+{{#if isDrizzle}}
 ├── db/ # Database schema & migrations
+{{#if isSQLite}}
+│ ├── index.ts # libSQL client + Drizzle instance
+{{/if}}
+{{#if isPostgres}}
+│ ├── index.ts # node-postgres pool + Drizzle instance
+{{/if}}
 │ ├── schema.ts # Drizzle schema definitions
 │ └── migrations/ # SQL migration files
 {{/if}}
@@ -63,8 +159,15 @@ high-quality engineering standards. **This file takes precedence over any confli
 ├── public/ # Static assets (images, fonts, etc.)
 ├── scripts/ # Helper scripts (DB seeds, etc.)
 ├── types/ # Global TypeScript interfaces
+{{#if hasWorkflow}}
+├── docs/ # Research, spikes, phase specs, ADRs, reviews, guides, handoffs (see Workflow)
+{{/if}}
 └── AGENTS.md # This reference file
 ```
+{{#if hasWorkflow}}
+
+{{{workflowSection}}}
+{{/if}}
 
 ## 🎨 Design Principles
 - **Responsive Design**: Mobile-first approach using Tailwind's responsive prefixes (`sm:`, `md:`, `lg:`).
@@ -141,10 +244,13 @@ avoid bundle bloat.
 ## � Things to Avoid
 - **No Inline Styles**: Use Tailwind classes or `cn()`.
 - **No Direct Fetching in Hooks**: Avoid `useEffect` for manual fetching.
-- **No Security Leaks**: **NEVER** expose secret environment variables to the client.{{#if isSupabase}} This includes the Supabase `service_role` key.{{/if}}
+- **No Security Leaks**: **NEVER** expose secret environment variables to the client.{{#if isSupabase}} This includes the Supabase `service_role` key.{{/if}}{{#if isTurso}} This includes the `TURSO_AUTH_TOKEN`.{{/if}}{{#if isPostgres}} This includes the `DATABASE_URL` (it contains the database password).{{/if}}
 - **No Magic Strings**: Move repeated strings, routes, or query keys to `{{#if isTanStack}}src/{{/if}}lib/constants.ts`.
 
 ## 📝 Best Practices
+{{#if hasWorkflow}}
+{{{conventionsSection}}}
+{{/if}}
 - **Rule of Three**: If you repeat logic three times, abstract it into a shared component, hook, or utility.
 - **Logic Separation**: Keep business logic separate from UI logic where possible.
 - **Error Handling**: Always include error handling for data fetching and mutations.

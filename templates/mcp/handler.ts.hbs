@@ -1,0 +1,58 @@
+import {
+  createMcpHandler,
+  hostHeaderValidationResponse,
+  localhostAllowedHostnames,
+  localhostAllowedOrigins,
+  McpServer,
+  originValidationResponse,
+} from '@modelcontextprotocol/server';
+import { registerTools } from './tools';
+
+// Stateless Streamable HTTP: a fresh McpServer per request, no session state to share
+// between server instances. Serves 2025-era clients (initialize handshake) and 2026-07-28 clients.
+const mcp = createMcpHandler(
+  async () => {
+    const server = new McpServer({ name: '{{projectName}}', version: '1.0.0' });
+    await registerTools(server);
+    return server;
+  },
+  { onerror: (error) => console.error('[mcp]', error) },
+);
+
+/** Constant-time string comparison (length is not secret). */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+const unauthorized = () =>
+  Response.json(
+    { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized' } },
+    { status: 401, headers: { 'WWW-Authenticate': 'Bearer realm="mcp"' } },
+  );
+
+/**
+ * With MCP_API_KEY set, every request needs `Authorization: Bearer <MCP_API_KEY>`.
+ * Without it the endpoint is closed in production. In development it is open, with the
+ * Host and Origin checked against localhost: that blocks DNS rebinding from a web page,
+ * but the headers are the client's to set, so it is not access control.
+ */
+function authorize(request: Request): Response | undefined {
+  const apiKey = process.env.MCP_API_KEY;
+  if (!apiKey) {
+    if ({{#if isTanStack}}import.meta.env.PROD{{else}}process.env.NODE_ENV === 'production'{{/if}}) return unauthorized();
+    return (
+      hostHeaderValidationResponse(request, localhostAllowedHostnames()) ??
+      originValidationResponse(request, localhostAllowedOrigins())
+    );
+  }
+  const match = /^Bearer\s+(.+)$/i.exec(request.headers.get('authorization') ?? '');
+  if (match && safeEqual(match[1].trim(), apiKey)) return undefined;
+  return unauthorized();
+}
+
+export async function handleMCP(request: Request): Promise<Response> {
+  return authorize(request) ?? mcp.fetch(request);
+}

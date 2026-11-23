@@ -1,0 +1,5 @@
+import { createRouteHandler } from 'uploadthing/next';
+import { uploadRouter } from '@/server/uploadthing';
+
+// Reads UPLOADTHING_TOKEN from the environment at request time
+export const { GET, POST } = createRouteHandler({ router: uploadRouter });

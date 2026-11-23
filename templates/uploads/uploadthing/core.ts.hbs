@@ -1,0 +1,36 @@
+{{#if isNextjs}}
+import { createUploadthing, type FileRouter } from 'uploadthing/next';
+import { UploadThingError } from 'uploadthing/server';
+{{else}}
+import { createUploadthing, type FileRouter, UploadThingError } from 'uploadthing/server';
+{{/if}}
+
+const f = createUploadthing();
+
+// Replace with your auth lookup (session cookie, Better Auth, etc.). Return null to reject the upload.
+// Until then uploads are allowed in development only, so a deployed app never accepts anonymous uploads.
+async function getUser(_req: Request): Promise<{ id: string } | null> {
+  return {{#if isTanStack}}import.meta.env.PROD{{else}}process.env.NODE_ENV === 'production'{{/if}} ? null : { id: 'anonymous' };
+}
+
+/**
+ * Each key is an upload endpoint. The client components in `lib/uploadthing.ts`
+ * are typed against this router, so renaming a key is a compile error on the client.
+ */
+export const uploadRouter = {
+  imageUploader: f({ image: { maxFileSize: '4MB', maxFileCount: 1 } })
+    // Runs on your server before the upload starts; whatever it returns becomes `metadata`
+    .middleware(async ({ req }) => {
+      const user = await getUser(req);
+      if (!user) throw new UploadThingError('Unauthorized');
+      return { userId: user.id };
+    })
+    // Runs on your server after UploadThing has stored the file (save `file.key` / `file.ufsUrl` to your DB here)
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log('upload complete', { userId: metadata.userId, key: file.key, url: file.ufsUrl });
+      // Returned data is sent to the client's `onClientUploadComplete`
+      return { uploadedBy: metadata.userId, url: file.ufsUrl };
+    }),
+} satisfies FileRouter;
+
+export type UploadRouter = typeof uploadRouter;

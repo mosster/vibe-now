@@ -1,0 +1,38 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { createUploadUrl, getFileUrl, StorageConfigError, UploadRejectedError } from '@/server/storage';
+
+// Replace with your auth lookup (session cookie, Better Auth, etc.). Return null to reject the upload.
+// Until then uploads are allowed in development only, so a deployed app never accepts anonymous uploads.
+async function getUser(_request: Request): Promise<{ id: string } | null> {
+  return import.meta.env.PROD ? null : { id: 'anonymous' };
+}
+
+/** POST { contentType, size } -> { key, uploadUrl, method, headers, fileUrl } for a direct browser upload to R2 */
+async function createUpload(request: Request) {
+  const user = await getUser(request);
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== 'object') return Response.json({ error: 'Expected a JSON body' }, { status: 400 });
+
+  try {
+    const upload = await createUploadUrl({ contentType: body.contentType, size: body.size, prefix: `uploads/${user.id}` });
+    // Store `upload.key` (not the URL) in your database once the client confirms the upload
+    return Response.json({ ...upload, fileUrl: await getFileUrl(upload.key) });
+  } catch (error) {
+    if (error instanceof UploadRejectedError) return Response.json({ error: error.message }, { status: 400 });
+    if (error instanceof StorageConfigError) {
+      console.error(error.message);
+      return Response.json({ error: error.message }, { status: 500 });
+    }
+    throw error;
+  }
+}
+
+export const Route = createFileRoute('/api/uploads')({
+  server: {
+    handlers: {
+      POST: ({ request }) => createUpload(request),
+    },
+  },
+});

@@ -1,0 +1,76 @@
+# Phase N<x>: <Name>
+
+- **Status:** Not started | In progress | Done
+- **Branch:** `phase-N<x>-<slug>`
+- **Builds on:** <the previous sub-phase, the research sections, spikes and ADRs this rests on>
+- **Watch list read:** <the latest reviews whose deferred findings apply, or "none yet">
+
+Copy this file to `phase-N/SPEC_PHASE_N<x>_<NAME>.md` for the **current sub-phase only**. {{#if isGated}}Fill every section that applies; delete the ones that don't, with a line saying why.{{else}}Keep it to about a page: fill the sections that apply and delete the rest.{{/if}}
+
+## Scope
+
+What this sub-phase delivers, in a few bullets. One focused area: if it spans unrelated concerns, split it.
+
+## Out of scope
+
+What it deliberately leaves out, and which later sub-phase (or "later") picks it up.
+
+{{#if hasDatabase}}
+## Schema changes
+
+New or changed tables, columns, indexes and constraints{{#if isDrizzle}} (Drizzle schema in `db/schema.ts`, with the migration generated and reviewed){{/if}}{{#if isConvex}} (`convex/schema.ts`){{/if}}. How existing data moves.
+
+{{/if}}
+## Modules and functions
+
+The services and modules added or changed, and what each owns. Name the registry a new member joins.
+
+## Agent surface
+
+*Required when the spec adds or changes a user capability.* The service function and every surface that exposes it ({{#if isORPC}}its oRPC procedure and REST route{{/if}}{{#if isTRPC}}its tRPC procedure{{/if}}{{#unless hasApi}}its server functions or route handlers{{/unless}}{{#if isMcp}}, and its MCP tool{{else}}, and an MCP tool once the app has one{{/if}}), with its auth scope and rate limit; or why it isn't exposed yet. Agents are first-class users: a capability people have, agents get too.
+
+## Cost and latency budget
+
+*Required when the spec adds paid calls (LLM, email, payments, third-party APIs) or a user-facing run.* Calls per billable unit, cost per unit, margin at full plan use, p50/p95 latency targets, and cache and reuse assumptions. Every paid call goes through one layer that records its cost.
+
+{{#if hasDatabase}}
+## Query budget
+
+*Required when a read path is added or changed.* Queries per request or page, no N+1, the indexes used, and `EXPLAIN` for hot paths.
+
+{{/if}}
+## Copy
+
+*Required for user-facing specs.* Headings, captions, empty states, errors and button labels, written out: plain words, one clear next action, American English.
+
+## Registries
+
+A new member of a concept goes in its registry. A new concept that spans layers names its registry, or says why not yet.
+
+## Testing plan
+
+The invariants that matter, each named (I1, I2, …), and the test that would fail if it broke. Fixtures shaped like real data.
+
+## Verification
+
+How to see it working: commands to run, pages to open, what to look for.
+
+## Risks
+
+What could go wrong, and how we'd notice.
+
+## Exit checklist
+
+- [ ] Every scope item built
+- [ ] Every invariant has a test
+- [ ] `{{{pm.run}}} check` is green
+{{#if isGated}}
+- [ ] Reviews run and recorded in `docs/reviews/`; findings fixed or deferred with a trigger
+- [ ] Budgets measured and met, or the breach accepted in writing
+{{/if}}
+- [ ] Docs updated ({{docFile}}, guides, `.env.example`)
+- [ ] `SPEC_MASTER_CHECKLIST.md` ticked; ADRs recorded
+
+## Notes from the build
+
+Surprises, decisions made on the way (with their ADRs), and what the next sub-phase should know.

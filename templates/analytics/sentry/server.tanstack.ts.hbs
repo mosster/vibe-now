@@ -1,0 +1,13 @@
+// Custom server entry (replaces TanStack Start's default one): starts Sentry first, then wraps the
+// request handler so errors and traces are reported.
+import './instrument.server';
+import * as Sentry from '@sentry/tanstackstart-react';
+import handler, { createServerEntry } from '@tanstack/react-start/server-entry';
+
+export default createServerEntry(
+  Sentry.wrapFetchWithSentry({
+    fetch(request, opts) {
+      return handler.fetch(request, opts);
+    },
+  }),
+);
