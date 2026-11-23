@@ -2,7 +2,7 @@
 
 A premium, interactive CLI wizard for scaffolding modern full-stack React applications with a perfectly curated stack. Choose between **Next.js** or **TanStack Start**, pick your database, payments, and tooling — and start building within seconds.
 
-<img width="3680" height="4144" alt="Terminal" src="https://github.com/user-attachments/assets/4a6e97c4-778b-432f-8fe0-46f1193aa543" />
+<img src=".github/assets/wizard.svg" width="820" alt="The vibe-now wizard in a terminal: it asks for the framework, package manager, workflow and each part of the stack, then creates the app and prints the next steps" />
 
 ## ✨ Features
 
